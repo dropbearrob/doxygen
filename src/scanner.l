@@ -1326,6 +1326,10 @@ NONLopt [^\n]*
                                           yyextra->current->spec.setMutable(true);
                                           lineCount(yyscanner);
                                         }
+<FindMembers>{B}*"thread_local"{BN}+    { if (yyextra->insideJava) REJECT;
+                                          yyextra->current->spec.setThreadLocal(true);
+                                          lineCount(yyscanner);
+                                        }
 <FindMembers>{B}*"explicit"{BN}+        { if (yyextra->insideJava) REJECT;
                                           yyextra->current->spec.setExplicit(true);
                                           lineCount(yyscanner);
@@ -2305,7 +2309,7 @@ NONLopt [^\n]*
                                           unput(';');
                                           BEGIN(FindMembers);
                                         }
-<QtPropType>{B}+                        {
+<QtPropType>{BN}+                       {
                                           yyextra->current->name+=yytext;
                                         }
 <QtPropType>"*"                         {
@@ -2317,24 +2321,24 @@ NONLopt [^\n]*
                                           yyextra->current->type+= yyextra->current->name;
                                           yyextra->current->name=yytext;
                                         }
-<QtPropType,QtPropAttr>{B}+"READ"{B}+   {
+<QtPropType,QtPropAttr>{BN}+"READ"{BN}+   {
                                           yyextra->current->spec.setReadable(true);
                                           BEGIN(QtPropRead);
                                         }
-<QtPropType,QtPropAttr>{B}+"WRITE"{B}+  {
+<QtPropType,QtPropAttr>{BN}+"WRITE"{BN}+  {
                                           yyextra->current->spec.setWritable(true);
                                           BEGIN(QtPropWrite);
                                         }
-<QtPropType,QtPropAttr>{B}+"MEMBER"{B}+{ID}     | // member property => not supported yet
-<QtPropType,QtPropAttr>{B}+"RESET"{B}+{ID}      | // reset method => not supported yet
-<QtPropType,QtPropAttr>{B}+"SCRIPTABLE"{B}+{ID} | // scriptable property => not supported yet
-<QtPropType,QtPropAttr>{B}+"DESIGNABLE"{B}+{ID} | // designable property => not supported yet
-<QtPropType,QtPropAttr>{B}+"NOTIFY"{B}+{ID}     | // notify property => not supported yet
-<QtPropType,QtPropAttr>{B}+"REVISION"{B}+{ID}   | // revision property => not supported yet
-<QtPropType,QtPropAttr>{B}+"STORED"{B}+{ID}     | // stored property => not supported yet
-<QtPropType,QtPropAttr>{B}+"USER"{B}+{ID}       | // user property => not supported yet
-<QtPropType,QtPropAttr>{B}+"CONSTANT"{B}        | // constant property => not supported yet
-<QtPropType,QtPropAttr>{B}+"FINAL"{B}           { // final property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"MEMBER"{BN}+{ID}     | // member property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"RESET"{BN}+{ID}      | // reset method => not supported yet
+<QtPropType,QtPropAttr>{BN}+"SCRIPTABLE"{BN}+{ID} | // scriptable property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"DESIGNABLE"{BN}+{ID} | // designable property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"NOTIFY"{BN}+{ID}     | // notify property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"REVISION"{BN}+{ID}   | // revision property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"STORED"{BN}+{ID}     | // stored property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"USER"{BN}+{ID}       | // user property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"CONSTANT"{BN}        | // constant property => not supported yet
+<QtPropType,QtPropAttr>{BN}+"FINAL"{BN}           { // final property => not supported yet
                                           BEGIN(QtPropAttr);
                                         }
 <QtPropRead>{ID}                        {
@@ -3645,7 +3649,7 @@ NONLopt [^\n]*
 <GCopyCurly>^"#"{B}+[0-9]+{B}+"\""[^\"\n]+"\""{B}+"1"{B}*\n? { // start of included file marker
                                         }
 <GCopyCurly>^"#"{B}+[0-9]+{B}+"\""[^\"\n]+"\""{B}+"2"{B}*\n? { // end of included file marker
-                                          QCString line = QCString(yytext);
+                                          QCString line = yytext;
                                           int s = line.find(' ');
                                           int e = line.find('"',s);
                                           yyextra->yyLineNr = line.mid(s,e-s).toInt();
@@ -5204,12 +5208,14 @@ NONLopt [^\n]*
                                           lineCount(yyscanner) ;
                                           yyextra->current->spec.setOverride(true);
                                           yyextra->current->args += " override ";
+                                          if (YY_START==TrailingReturn) yyextra->current->argList.finishTrailingReturnType();
                                           BEGIN(FuncQual);
                                         }
 <FuncQual,TrailingReturn>{BN}*"final"{BN}*             { // C++11 final method
                                           lineCount(yyscanner) ;
                                           yyextra->current->spec.setFinal(true);
                                           yyextra->current->args += " final ";
+                                          if (YY_START==TrailingReturn) yyextra->current->argList.finishTrailingReturnType();
                                           BEGIN(FuncQual);
                                         }
 <FuncQual>{BN}*"sealed"{BN}*            { // sealed member function
@@ -5264,6 +5270,7 @@ NONLopt [^\n]*
                                           yyextra->current->args += " = 0";
                                           yyextra->current->virt = Specifier::Pure;
                                           yyextra->current->argList.setPureSpecifier(TRUE);
+                                          if (YY_START==TrailingReturn) yyextra->current->argList.finishTrailingReturnType();
                                           BEGIN(FuncQual);
                                         }
 <FuncQual,TrailingReturn>{BN}*"="{BN}*"delete"{BN}*     { // C++11 explicitly delete member
@@ -5271,12 +5278,14 @@ NONLopt [^\n]*
                                           yyextra->current->args += " = delete";
                                           yyextra->current->spec.setDelete(true);
                                           yyextra->current->argList.setIsDeleted(TRUE);
+                                          if (YY_START==TrailingReturn) yyextra->current->argList.finishTrailingReturnType();
                                           BEGIN(FuncQual);
                                         }
 <FuncQual,TrailingReturn>{BN}*"="{BN}*"default"{BN}*     { // C++11 explicitly defaulted constructor/assignment operator
                                           lineCount(yyscanner);
                                           yyextra->current->args += " = default";
                                           yyextra->current->spec.setDefault(true);
+                                          if (YY_START==TrailingReturn) yyextra->current->argList.finishTrailingReturnType();
                                           BEGIN(FuncQual);
                                         }
 <FuncQual>{BN}*"->"{BN}*                {
@@ -5289,17 +5298,19 @@ NONLopt [^\n]*
 <TrailingReturn>[{;]                    {
                                           if (yyextra->roundCount>0) REJECT;
                                           unput(*yytext);
+                                          yyextra->current->argList.finishTrailingReturnType();
                                           BEGIN(FuncQual);
                                         }
 <TrailingReturn>"requires"{BN}+         {
                                           if (yyextra->insideJava) REJECT;
                                           yyextra->requiresContext = FuncQual;
                                           yyextra->current->req+=' ';
+                                          yyextra->current->argList.finishTrailingReturnType();
                                           BEGIN(RequiresClause);
                                         }
 <TrailingReturn>"("                     {
                                           yyextra->roundCount++;
-                                          yyextra->current->argList.setTrailingReturnType(yyextra->current->argList.trailingReturnType()+yytext);
+                                          yyextra->current->argList.appendTrailingReturnType(yytext);
                                           yyextra->current->args+=yytext;
                                         }
 <TrailingReturn>")"                     {
@@ -5313,16 +5324,16 @@ NONLopt [^\n]*
                                                  "Found ')' without opening '(' for trailing return type '{})...'",
                                                  yyextra->current->argList.trailingReturnType());
                                           }
-                                          yyextra->current->argList.setTrailingReturnType(yyextra->current->argList.trailingReturnType()+yytext);
+                                          yyextra->current->argList.appendTrailingReturnType(yytext);
                                           yyextra->current->args+=yytext;
                                         }
 <TrailingReturn>.                       {
-                                          yyextra->current->argList.setTrailingReturnType(yyextra->current->argList.trailingReturnType()+yytext);
+                                          yyextra->current->argList.appendTrailingReturnType(yytext);
                                           yyextra->current->args+=yytext;
                                         }
 <TrailingReturn>\n                      {
                                           lineCount(yyscanner);
-                                          yyextra->current->argList.setTrailingReturnType(yyextra->current->argList.trailingReturnType()+yytext);
+                                          yyextra->current->argList.appendTrailingReturnType(yytext);
                                           yyextra->current->args+=' ';
                                         }
 <FuncRound,FuncFunc>{BN}*","{BN}*       {
@@ -7337,14 +7348,14 @@ NONLopt [^\n]*
                                           }
                                         }
 <DocCopyBlock>"''"/[^a-z_A-Z0-9-]       {
-                                          if (endVerbatimBlock(yyscanner,"``",2))
+                                          if (!Config_getBool(MARKDOWN_STRICT) && endVerbatimBlock(yyscanner,"``",2))
                                           {
                                             BEGIN(DocBlock);
                                           }
                                           yyextra->docBlock << yytext;
                                         }
 <DocCopyBlock>"'"/[^'a-z_A-Z0-9-]       {
-                                          if (endVerbatimBlock(yyscanner,"`",1))
+                                          if (!Config_getBool(MARKDOWN_STRICT) && endVerbatimBlock(yyscanner,"`",1))
                                           {
                                             BEGIN(DocBlock);
                                           }

@@ -1560,7 +1560,7 @@ class TranslatorCroatian : public TranslatorAdapter_1_8_2
     { return "Dodatni naslijeđeni članovi"; }
 
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override

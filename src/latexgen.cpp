@@ -706,7 +706,7 @@ void LatexGenerator::writeStyleSheetFile(TextStream &t)
   writeDefaultStyleSheet(t);
 }
 
-void LatexGenerator::startFile(const QCString &name,const QCString &,const QCString &,int,int hierarchyLevel)
+void LatexGenerator::startFile(const QCString &name,bool,const QCString &,const QCString &,int,int hierarchyLevel)
 {
 #if 0
   setEncoding(Config_getString(LATEX_OUTPUT_ENCODING));
@@ -748,14 +748,15 @@ static QCString extraLatexStyleSheet()
       if (fi.exists())
       {
         result += "\\usepackage{";
-        if (checkExtension(fi.fileName().c_str(), LATEX_STYLE_EXTENSION))
+        QCString fn = fi.fileName();
+        if (checkExtension(fn, LATEX_STYLE_EXTENSION))
         {
           // strip the extension, it will be added by the usepackage in the tex conversion process
-          result += stripExtensionGeneral(fi.fileName().c_str(), LATEX_STYLE_EXTENSION);
+          result += stripExtensionGeneral(fn, LATEX_STYLE_EXTENSION);
         }
         else
         {
-          result += fi.fileName();
+          result += fn;
         }
         result += "}\n";
       }
@@ -1499,18 +1500,6 @@ void LatexGenerator::endTitleHead(const QCString &fileName,const QCString &name)
   }
 }
 
-void LatexGenerator::startTitle()
-{
-  if (Config_getBool(COMPACT_LATEX))
-  {
-    m_t << "\\doxysubsection{";
-  }
-  else
-  {
-    m_t << "\\doxysection{";
-  }
-}
-
 void LatexGenerator::startGroupHeader(const QCString &,int extraIndentLevel)
 {
   if (Config_getBool(COMPACT_LATEX))
@@ -2137,7 +2126,7 @@ void LatexGenerator::exceptionEntry(const QCString &prefix,bool closeBracket)
   m_t << " ";
 }
 
-void LatexGenerator::writeDoc(const IDocNodeAST *ast,const Definition *ctx,const MemberDef *,int)
+void LatexGenerator::writeDoc(const IDocNodeAST *ast,const Definition *ctx,const MemberDef *,int,int)
 {
   const DocNodeAST *astImpl = dynamic_cast<const DocNodeAST*>(ast);
   if (astImpl)
@@ -2333,9 +2322,9 @@ void writeExtraLatexPackages(TextStream &t)
     for (const auto &pkgName : extraPackages)
     {
       if ((pkgName[0] == '[') || (pkgName[0] == '{'))
-        t << "\\usepackage" << pkgName.c_str() << "\n";
+        t << "\\usepackage" << pkgName << "\n";
       else
-        t << "\\usepackage{" << pkgName.c_str() << "}\n";
+        t << "\\usepackage{" << pkgName << "}\n";
     }
     t << "\n";
   }
@@ -2515,7 +2504,15 @@ void filterLatexString(TextStream &t,const QCString &str,
                    break;
         case '\'': t << "\\textquotesingle{}";
                    break;
-        case '\n':  if (retainNewline) t << "\\newline"; else t << ' ';
+        case '\n': if (retainNewline)
+                   {
+                     t << "\\newline";
+                     if (insideTable) t << " ";
+                   }
+                   else
+                   {
+                     t << ' ';
+                   }
                    break;
         case ' ':  if (keepSpaces) { if (insideTabbing) t << "\\>"; else t << '~'; } else t << ' ';
                    break;

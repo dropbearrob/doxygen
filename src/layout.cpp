@@ -203,7 +203,7 @@ class LayoutParser
     }
     void error( const std::string &fileName,int lineNr,const std::string &msg)
     {
-      warn_layout(fileName.c_str(),lineNr,"{}",msg.c_str());
+      warn_layout(fileName,lineNr,"{}",msg);
     }
     void startElement( const std::string &name, const XMLHandlers::Attributes& attrib );
     void endElement( const std::string &name );
@@ -570,14 +570,14 @@ class LayoutParser
       }
       if (mapping[i].typeStr==nullptr)
       {
-        std::string fileName = m_locator->fileName();
+        QCString fileName = m_locator->fileName();
         if (type.isEmpty())
         {
-          warn_layout(fileName.c_str(),m_locator->lineNr(),"an entry tag within a navindex has no type attribute! Check your layout file!");
+          warn_layout(fileName,m_locator->lineNr(),"an entry tag within a navindex has no type attribute! Check your layout file!");
         }
         else
         {
-          warn_layout(fileName.c_str(),m_locator->lineNr(),"the type '{}' is not supported for the entry tag within a navindex! Check your layout file!",type);
+          warn_layout(fileName,m_locator->lineNr(),"the type '{}' is not supported for the entry tag within a navindex! Check your layout file!",type);
         }
         m_invalidEntry=TRUE;
         return;
@@ -801,6 +801,7 @@ static auto endCb(void (LayoutParser::*fn)(Args...))
   return [=](LayoutParser &parser,const std::string &id) { (parser.*fn)(id); };
 }
 
+// clang-format off
 static const std::map< std::string, ElementCallbacks > g_elementHandlers =
 {
   // path/name
@@ -1365,6 +1366,7 @@ static const std::map< std::string, ElementCallbacks > g_elementHandlers =
   { "directory/memberdecl/dirs",                  { startCb(&LayoutParser::startSimpleEntry, LayoutDocEntry::DirSubDirs)         } },
   { "directory/memberdecl/files",                 { startCb(&LayoutParser::startSimpleEntry, LayoutDocEntry::DirFiles)           } },
 };
+// clang-format on
 
 } // namespace
 
@@ -1378,8 +1380,8 @@ void LayoutParser::startElement( const std::string &name, const XMLHandlers::Att
   }
   else
   {
-    std::string fileName = m_locator->fileName();
-    warn_layout(fileName.c_str(),m_locator->lineNr(),"Unexpected start tag '{}' found in scope='{}'!",
+    QCString fileName = m_locator->fileName();
+    warn_layout(fileName,m_locator->lineNr(),"Unexpected start tag '{}' found in scope='{}'!",
         name,m_scope);
   }
 }

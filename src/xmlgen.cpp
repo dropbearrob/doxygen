@@ -183,14 +183,14 @@ class TextGeneratorXMLImpl : public TextGeneratorIntf
     TextGeneratorXMLImpl(TextStream &t): m_t(t) {}
     void writeString(std::string_view s,bool /*keepSpaces*/) const override
     {
-      writeXMLString(m_t,QCString(s));
+      writeXMLString(m_t,s);
     }
     void writeBreak(int) const override {}
     void writeLink(const QCString &extRef,const QCString &file,
                    const QCString &anchor,std::string_view text
                   ) const override
     {
-      writeXMLLink(m_t,extRef,file,anchor,QCString(text),QCString());
+      writeXMLLink(m_t,extRef,file,anchor,text,QCString());
     }
   private:
     TextStream &m_t;
@@ -456,8 +456,13 @@ static void writeXMLDocBlock(TextStream &t,
   // convert the documentation string into an abstract syntax tree
   auto parser { createDocParser() };
   auto ast    { validatingParseDoc(*parser.get(),
-                                   fileName,lineNr,scope,md,text,FALSE,FALSE,
-                                   QCString(),FALSE,FALSE) };
+                                   fileName,
+                                   lineNr,
+                                   scope,
+                                   md,
+                                   text,
+                                   DocOptions())
+               };
   auto astImpl = dynamic_cast<const DocNodeAST*>(ast.get());
   if (astImpl)
   {
@@ -904,6 +909,11 @@ static void generateXMLForMember(const MemberDef *md,TextStream &ti,TextStream &
     if (md->isMutable()) t << "yes"; else t << "no";
     t << "\"";
 
+    if (md->isThreadLocal())
+    {
+      t << " thread_local=\"yes\"";
+    }
+
     if (md->isInitonly())
     {
       t << " initonly=\"yes\"";
@@ -1074,7 +1084,7 @@ static void generateXMLForMember(const MemberDef *md,TextStream &ti,TextStream &
 
   for (const auto &qmd : md->getQualifiers())
   {
-    t << "        <qualifier>" << convertToXML(qmd.c_str()) << "</qualifier>\n";
+    t << "        <qualifier>" << convertToXML(qmd) << "</qualifier>\n";
   }
 
   if (md->isFriendClass()) // for friend classes we show a link to the class as a "parameter"
@@ -1361,7 +1371,7 @@ static void writeInnerConcepts(const ConceptLinkedRefMap &cl,TextStream &t)
 {
   for (const auto &cd : cl)
   {
-    if (cd->isHidden())
+    if (!cd->isHidden())
     {
       t << "    <innerconcept refid=\"" << cd->getOutputFileBase()
         << "\">" << convertToXML(cd->name()) << "</innerconcept>\n";
@@ -1373,7 +1383,7 @@ static void writeInnerModules(const ModuleLinkedRefMap &ml,TextStream &t)
 {
   for (const auto &mod : ml)
   {
-    if (mod->isHidden())
+    if (!mod->isHidden())
     {
       t << "    <innermodule refid=\"" << mod->getOutputFileBase()
         << "\">" << convertToXML(mod->name()) << "</innermodule>\n";
@@ -1602,7 +1612,7 @@ static void generateXMLForClass(const ClassDef *cd,TextStream &ti)
 
   for (const auto &qcd : cd->getQualifiers())
   {
-    t << "    <qualifier>" << convertToXML(qcd.c_str()) << "</qualifier>\n";
+    t << "    <qualifier>" << convertToXML(qcd) << "</qualifier>\n";
   }
 
   t << "    <briefdescription>\n";

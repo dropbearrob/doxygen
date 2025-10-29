@@ -57,7 +57,6 @@ static void format_warn(const QCString &file,int line,const QCString &text)
 {
   QCString fileSubst = file.isEmpty() ? "<unknown>" : file;
   QCString lineSubst; lineSubst.setNum(line);
-  QCString textSubst = text;
   QCString versionSubst;
   // substitute markers by actual values
   QCString msgText =
@@ -72,7 +71,7 @@ static void format_warn(const QCString &file,int line,const QCString &text)
           ),
           "$version",versionSubst
         ),
-        "$text",textSubst
+        "$text",text
       );
   if (g_warnBehavior == WARN_AS_ERROR_t::YES)
   {
@@ -121,7 +120,7 @@ static void handle_warn_as_error()
 
 static void do_warn(const QCString &file, int line, const char *prefix, fmt::string_view fmt, fmt::format_args args)
 {
-  format_warn(file,line,QCString(prefix+fmt::vformat(fmt,args)));
+  format_warn(file,line,prefix+fmt::vformat(fmt,args));
   handle_warn_as_error();
 }
 
@@ -185,7 +184,7 @@ void err_(fmt::string_view fmt, fmt::format_args args)
 
 void err_full_(const QCString &file, int line, fmt::string_view fmt, fmt::format_args args)
 {
-  format_warn(file,line,QCString(g_errorStr+fmt::vformat(fmt,args)));
+  format_warn(file,line,g_errorStr+fmt::vformat(fmt,args));
 }
 
 //-----------------------------------------------------------------------------------------
@@ -256,8 +255,8 @@ void initWarningFormat()
     else
     {
       FileInfo fi(g_warnlogFile.str());
-      Dir d(fi.dirPath().c_str());
-      if (!d.exists() && !d.mkdir(fi.dirPath().c_str()))
+      Dir d(fi.dirPath());
+      if (!d.exists() && !d.mkdir(fi.dirPath()))
       {
         // point it to something valid, because warn() relies on it
         g_warnFile = stderr;

@@ -72,7 +72,7 @@ class TranslatorJapaneseEn : public TranslatorEnglish
       return "0x411 Japanese";
     }
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override

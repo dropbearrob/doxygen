@@ -764,12 +764,10 @@ SLASHopt [/]*
 				     }
   				   }
 <VerbatimCode>("```"[`]*|"~~~"[~]*) { /* end of markdown code block */
-                                     if (yytext[0]=='`' && (yyextra->blockName=="`" || yyextra->blockName=="``")) // ``` inside single quote block
+                                     if (yytext[0]=='`' && (yyextra->blockName=="`" || yyextra->blockName=="``")) // ``` type block inside single or double backtick "block"
                                      {
                                        // copy the end block marker
                                        copyToOutput(yyscanner,yytext,yyleng);
-                                       yyextra->inVerbatim=false;
-                                       BEGIN(yyextra->lastCommentContext);
                                      }
                                      else
                                      {
@@ -783,7 +781,7 @@ SLASHopt [/]*
                                    }
 <VerbatimCode>"''"                 {
                                      copyToOutput(yyscanner,yytext,yyleng);
-                                     if (yyextra->blockName=="``") // support for ``text''
+                                     if (!Config_getBool(MARKDOWN_STRICT) && yyextra->blockName=="``") // support for ``text''
                                      {
                                        yyextra->inVerbatim=false;
                                        BEGIN(yyextra->lastCommentContext);
@@ -791,7 +789,7 @@ SLASHopt [/]*
                                    }
 <VerbatimCode>"'"                  {
                                      copyToOutput(yyscanner,yytext,yyleng);
-                                     if (yyextra->blockName=="`") // support for `text'
+                                     if (!Config_getBool(MARKDOWN_STRICT) && yyextra->blockName=="`") // support for `text'
                                      {
                                        yyextra->inVerbatim=false;
                                        BEGIN(yyextra->lastCommentContext);
@@ -1521,7 +1519,7 @@ static bool parseIncludeOptions(yyscan_t yyscanner,std::string_view s)
 {
   struct yyguts_t *yyg = (struct yyguts_t*)yyscanner;
 
-  //printf("parseIncludeOptions=%s\n",qPrint(QCString(s)));
+  //printf("parseIncludeOptions=%s\n",qPrint(s));
   size_t optIdxStart = s.find('{');
   size_t optIdxEnd   = optIdxStart!=std::string::npos ? s.find("}",optIdxStart+1) : std::string::npos;
   std::string cmdName;
@@ -1731,7 +1729,7 @@ static void handleCondSectionId(yyscan_t yyscanner,const char *expression)
 {
   struct yyguts_t *yyg = (struct yyguts_t*)yyscanner;
   bool oldSkip=yyextra->skip;
-  startCondSection(yyscanner,QCString(expression));
+  startCondSection(yyscanner,expression);
   if ((yyextra->condCtx==CComment || yyextra->readLineCtx==SComment) &&
       !oldSkip && yyextra->skip)
   {
@@ -2122,7 +2120,7 @@ void convertCppComments(const std::string &inBuf,std::string &outBuf,const std::
   if (yyextra->lang==SrcLangExt::Fortran)
   {
     FortranFormat fmt = convertFileNameFortranParserCode(fileName);
-    yyextra->isFixedForm = recognizeFixedForm(QCString(inBuf),fmt);
+    yyextra->isFixedForm = recognizeFixedForm(inBuf,fmt);
   }
 
   if (yyextra->lang==SrcLangExt::Markdown)

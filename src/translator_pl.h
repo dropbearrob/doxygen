@@ -2582,7 +2582,7 @@ class TranslatorPolish : public Translator
       return "Ważne";
     }
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override

@@ -1779,7 +1779,7 @@ class TranslatorDanish : public TranslatorAdapter_1_8_0
       return QCString("Afhængighedsgraf for katalog ")+name+":";
     }
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override

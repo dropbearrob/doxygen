@@ -111,17 +111,17 @@ static void visitPreStart(TextStream &t, bool hasCaption, QCString name,  QCStri
 {
     if (inlineImage)
     {
-      t << "\n\\begin{DoxyInlineImage}\n";
+      t << "\n\\begin{DoxyInlineImage}%\n";
     }
     else
     {
       if (hasCaption)
       {
-        t << "\n\\begin{DoxyImage}\n";
+        t << "\n\\begin{DoxyImage}%\n";
       }
       else
       {
-        t << "\n\\begin{DoxyImageNoCaption}\n"
+        t << "\n\\begin{DoxyImageNoCaption}%\n"
                "  \\mbox{";
       }
     }
@@ -170,11 +170,11 @@ static void visitPreStart(TextStream &t, bool hasCaption, QCString name,  QCStri
       {
         if (Config_getBool(PDF_HYPERLINKS))
         {
-          t << "\n\\doxyfigcaption{";
+          t << "%\n\\doxyfigcaption{";
         }
         else
         {
-          t << "\n\\doxyfigcaptionnolink{";
+          t << "%\n\\doxyfigcaptionnolink{";
         }
       }
       else
@@ -190,11 +190,11 @@ static void visitPostEnd(TextStream &t, bool hasCaption, bool inlineImage = FALS
 {
     if (inlineImage)
     {
-      t << "\n\\end{DoxyInlineImage}\n";
+      t << "%\n\\end{DoxyInlineImage}\n";
     }
     else
     {
-      t << "}\n"; // end mbox or caption
+      t << "}%\n"; // end mbox or caption
       if (hasCaption)
       {
         t << "\\end{DoxyImage}\n";
@@ -236,34 +236,6 @@ void LatexDocVisitor::visitCaption(const DocNodeList &children)
     std::visit(*this,n);
   }
 }
-
-QCString LatexDocVisitor::escapeMakeIndexChars(const char *s)
-{
-  QCString result;
-  const char *p=s;
-  char str[2]; str[1]=0;
-  char c = 0;
-  if (p)
-  {
-    while ((c=*p++))
-    {
-      switch (c)
-      {
-        case '!': m_t << "\"!"; break;
-        case '"': m_t << "\"\""; break;
-        case '@': m_t << "\"@"; break;
-        case '|': m_t << "\\texttt{\"|}"; break;
-        case '[': m_t << "["; break;
-        case ']': m_t << "]"; break;
-        case '{': m_t << "\\lcurly{}"; break;
-        case '}': m_t << "\\rcurly{}"; break;
-        default:  str[0]=c; filter(str); break;
-      }
-    }
-  }
-  return result;
-}
-
 
 LatexDocVisitor::LatexDocVisitor(TextStream &t,OutputCodeList &ci,LatexCodeGenerator &lcg,
                                  const QCString &langExt, int hierarchyLevel)
@@ -378,7 +350,14 @@ void LatexDocVisitor::operator()(const DocURL &u)
 void LatexDocVisitor::operator()(const DocLineBreak &)
 {
   if (m_hide) return;
+  if (m_insideItem)
+  {
+  m_t << "\\\\\n";
+  }
+  else
+  {
   m_t << "~\\newline\n";
+  }
 }
 
 void LatexDocVisitor::operator()(const DocHorRuler &)
@@ -476,9 +455,18 @@ void LatexDocVisitor::operator()(const DocVerbatim &s)
       m_t << "}";
       break;
     case DocVerbatim::Verbatim:
-      m_t << "\\begin{DoxyVerb}";
-      m_t << s.text();
-      m_t << "\\end{DoxyVerb}\n";
+      if (isTableNested(s.parent())) // in table
+      {
+        m_t << "\\begin{DoxyCode}{0}";
+        filter(s.text(), true);
+        m_t << "\\end{DoxyCode}\n";
+      }
+      else
+      {
+        m_t << "\\begin{DoxyVerb}";
+        m_t << s.text();
+        m_t << "\\end{DoxyVerb}\n";
+      }
       break;
     case DocVerbatim::HtmlOnly:
     case DocVerbatim::XmlOnly:
@@ -557,7 +545,7 @@ void LatexDocVisitor::operator()(const DocVerbatim &s)
 
         for (const auto &baseName: baseNameVector)
         {
-          writePlantUMLFile(QCString(baseName), s);
+          writePlantUMLFile(baseName, s);
         }
       }
       break;
@@ -632,9 +620,18 @@ void LatexDocVisitor::operator()(const DocInclude &inc)
       m_t << inc.text();
       break;
     case DocInclude::VerbInclude:
-      m_t << "\n\\begin{DoxyVerbInclude}\n";
-      m_t << inc.text();
-      m_t << "\\end{DoxyVerbInclude}\n";
+      if (isTableNested(inc.parent())) // in table
+      {
+        m_t << "\\begin{DoxyCode}{0}";
+        filter(inc.text(), true);
+        m_t << "\\end{DoxyCode}\n";
+      }
+      else
+      {
+        m_t << "\n\\begin{DoxyVerbInclude}\n";
+        m_t << inc.text();
+        m_t << "\\end{DoxyVerbInclude}\n";
+      }
       break;
     case DocInclude::Snippet:
     case DocInclude::SnippetWithLines:
@@ -1233,11 +1230,11 @@ void LatexDocVisitor::operator()(const DocHtmlDescList &dl)
 void LatexDocVisitor::operator()(const DocHtmlDescTitle &dt)
 {
   if (m_hide) return;
-  m_t << "\n\\item[";
+  m_t << "\n\\item[{\\parbox[t]{\\linewidth}{";
   m_insideItem=TRUE;
   visitChildren(dt);
   m_insideItem=FALSE;
-  m_t << "]";
+  m_t << "}}]";
 }
 
 void LatexDocVisitor::operator()(const DocHtmlDescData &dd)
@@ -1264,13 +1261,12 @@ void LatexDocVisitor::writeStartTableCommand(const DocNodeVariant *n,size_t cols
 {
   if (isTableNested(n))
   {
-    m_t << "\n\\begin{DoxyTableNested}{" << cols << "}";
+    m_t << "\\begin{DoxyTableNested}{" << cols << "}";
   }
   else
   {
     m_t << "\n\\begin{DoxyTable}{" << cols << "}";
   }
-  //return isNested ? "TabularNC" : "TabularC";
 }
 
 void LatexDocVisitor::writeEndTableCommand(const DocNodeVariant *n)
@@ -1283,7 +1279,6 @@ void LatexDocVisitor::writeEndTableCommand(const DocNodeVariant *n)
   {
     m_t << "\\end{DoxyTable}\n";
   }
-  //return isNested ? "TabularNC" : "TabularC";
 }
 
 void LatexDocVisitor::operator()(const DocHtmlTable &t)
@@ -1302,7 +1297,6 @@ void LatexDocVisitor::operator()(const DocHtmlTable &t)
     m_t << "\n";
   }
 
-  const DocHtmlRow *firstRow = std::get_if<DocHtmlRow>(t.firstRow());
   writeStartTableCommand(t.parent(),t.numColumns());
   if (!isTableNested(t.parent()))
   {
@@ -1315,24 +1309,15 @@ void LatexDocVisitor::operator()(const DocHtmlTable &t)
     m_t << "}";
     // write label
     m_t << "{";
-    if (c)
+    if (c && (!stripPath(c->file()).isEmpty() || !c->anchor().isEmpty()))
     {
       m_t << stripPath(c->file()) << "_" << c->anchor();
     }
     m_t << "}";
   }
-  // write head row
-  m_t << "{";
-  if (firstRow && firstRow->isHeading())
-  {
-    m_t << "1";
-  }
-  else
-  {
-    m_t << "0";
-  }
-  m_t << "}";
-  m_t << "\n";
+
+  // write head row(s)
+  m_t << "{" << t.numberHeaderRows() << "}\n";
 
   setNumCols(t.numColumns());
 
@@ -1456,6 +1441,11 @@ void LatexDocVisitor::operator()(const DocHtmlCell &c)
     // update column to the end of the span, needs to be done *after* calling addRowSpan()
     setCurrentColumn(currentColumn()+cs-1);
     appendOpt("c="+QCString().setNum(cs));
+  }
+  if (c.isHeading())
+  {
+    appendSpec("bg=\\tableheadbgcolor");
+    appendSpec("font=\\bfseries");
   }
   switch(va) // vertical alignment
   {
@@ -2039,17 +2029,6 @@ void LatexDocVisitor::endDiaFile(bool hasCaption)
   visitPostEnd(m_t,hasCaption);
 }
 
-
-void LatexDocVisitor::writeDiaFile(const QCString &baseName, const DocVerbatim &s)
-{
-  QCString shortName = makeShortName(baseName);
-  QCString outDir = Config_getString(LATEX_OUTPUT);
-  writeDiaGraphFromFile(baseName+".dia",outDir,shortName,DiaOutputFormat::EPS,s.srcFile(),s.srcLine());
-  visitPreStart(m_t, s.hasCaption(), shortName, s.width(), s.height());
-  visitCaption(s.children());
-  visitPostEnd(m_t, s.hasCaption());
-}
-
 void LatexDocVisitor::writePlantUMLFile(const QCString &baseName, const DocVerbatim &s)
 {
   QCString shortName = makeShortName(baseName);
@@ -2079,13 +2058,13 @@ void LatexDocVisitor::startPlantUmlFile(const QCString &fileName,
 
   bool useBitmap = inBuf.find("@startditaa") != std::string::npos;
   auto baseNameVector = PlantumlManager::instance().writePlantUMLSource(
-                              outDir,QCString(),inBuf.c_str(),
+                              outDir,QCString(),inBuf,
                               useBitmap ? PlantumlManager::PUML_BITMAP : PlantumlManager::PUML_EPS,
                               QCString(),srcFile,srcLine,false);
   bool first = true;
   for (const auto &bName: baseNameVector)
   {
-    QCString baseName = makeBaseName(QCString(bName));
+    QCString baseName = makeBaseName(bName);
     QCString shortName = makeShortName(baseName);
     if (useBitmap)
     {

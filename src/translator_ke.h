@@ -63,7 +63,7 @@ class TranslatorKoreanEn : public TranslatorEnglish
       return "0x412 Korean";
     }
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override

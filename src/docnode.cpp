@@ -108,8 +108,7 @@ static QCString stripKnownExtensions(const QCString &text)
   {
     result=result.left(result.length()-4);
   }
-  else if (result.right(Doxygen::htmlFileExtension.length())==
-         QCString(Doxygen::htmlFileExtension))
+  else if (result.right(Doxygen::htmlFileExtension.length())==Doxygen::htmlFileExtension)
   {
     result=result.left(result.length()-Doxygen::htmlFileExtension.length());
   }
@@ -1430,10 +1429,9 @@ void DocHtmlSummary::parse()
   Token tok = parser()->tokenizer.lex();
   while (!tok.is_any_of(TokenRetval::TK_NONE, TokenRetval::TK_EOF))
   {
-    HtmlTagType tagId = HtmlTagType::UNKNOWN;
     // check of </summary>
     if (tok.value()==TokenRetval::TK_HTMLTAG &&
-        (tagId=Mappers::htmlTagMapper->map(parser()->context.token->name))==HtmlTagType::XML_SUMMARY &&
+        (Mappers::htmlTagMapper->map(parser()->context.token->name))==HtmlTagType::XML_SUMMARY &&
         parser()->context.token->endTag
        )
     {
@@ -2186,13 +2184,19 @@ const DocNodeVariant *DocHtmlTable::caption() const
   return m_caption.get();
 }
 
-const DocNodeVariant *DocHtmlTable::firstRow() const
+size_t DocHtmlTable::numberHeaderRows() const
 {
-  if (!children().empty() && std::holds_alternative<DocHtmlRow>(children().front()))
+  size_t hl = 0;
+  for (auto &rowNode : children())
   {
-    return &children().front();
+    const DocHtmlRow *row = std::get_if<DocHtmlRow>(&rowNode);
+    if (row)
+    {
+      if (!row->isHeading())  break;
+      hl++;
+    }
   }
-  return nullptr;
+  return hl;
 }
 
 Token DocHtmlTable::parse()
@@ -2472,7 +2476,11 @@ Token DocHtmlDescTitle::parse()
                     }
                   }
                 }
-
+                break;
+              case CommandType::CMD_LINEBREAK:
+                {
+                  children().append<DocLineBreak>(parser(),thisVariant(),parser()->context.token->attribs);
+                }
                 break;
               default:
                 warn_doc_error(parser()->context.fileName,parser()->tokenizer.getLineNr(),"Illegal command '{:c}{}' found as part of a <dt> tag",
@@ -2513,6 +2521,10 @@ Token DocHtmlDescTitle::parse()
               {
                 parser()->handleAHref(thisVariant(),children(),parser()->context.token->attribs);
               }
+            }
+            else if (tagId==HtmlTagType::HTML_BR)
+            {
+              children().append<DocLineBreak>(parser(),thisVariant(),parser()->context.token->attribs);
             }
             else
             {

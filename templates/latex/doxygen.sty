@@ -13,7 +13,38 @@
 \RequirePackage{longtable}
 \RequirePackage{xltabular}
 \RequirePackage{tabularray}
+\ExplSyntaxOn
+\IfPackageAtLeastTF{tabularray}{2025-03-11}
+{
+  \IfPackageAtLeastTF{tabularray}{2025-03-12}
+  {
+    %newer version, do nothing
+  }
+  {
+     %the required version
+     \bool_gset_false:N \g__tblr_use_intarray_bool
+  }
+}
+{
+  %older version, do nothing
+}
+\ExplSyntaxOff
 \UseTblrLibrary{varwidth}
+\ExplSyntaxOn
+\int_new:N \g__doxy_nohyper_int
+\AtBeginDocument
+  {
+    \renewenvironment{tblrNoHyper}
+      {
+        \int_compare:nNnT {\g__doxy_nohyper_int} = {0} {\begin{NoHyper}}
+        \int_gincr:N \g__doxy_nohyper_int
+      }
+      {
+        \int_gdecr:N \g__doxy_nohyper_int
+        \int_compare:nNnT {\g__doxy_nohyper_int} = {0} {\end{NoHyper}}
+      }
+  }
+\ExplSyntaxOff
 \RequirePackage{fancyvrb}
 \RequirePackage{tabularx}
 \RequirePackage{multicol}
@@ -373,10 +404,15 @@
 \NewDocumentEnvironment{DoxyTable}{m +m m m +b}{%
 \par%
 \def\hascaption{#2}%
+\def\haslabel{#3}%
 \ifx\hascaption\empty% if caption is empty
   \SetTblrOuter[longtblr]{theme=DoxyTableBareTheme}% table without caption or label
 \else% caption not empty
-  \SetTblrOuter[longtblr]{theme=DoxyTableCaptionTheme,caption={#2},label={#3}}% set table caption and label
+  \ifx\haslabel\empty% if label is empty
+    \SetTblrOuter[longtblr]{theme=DoxyTableCaptionTheme,caption={#2}}% set table caption
+  \else% label not empty
+    \SetTblrOuter[longtblr]{theme=DoxyTableCaptionTheme,caption={#2},label={#3}}% set table caption and label
+  \fi%
 \fi%
 \sbox0{% first render the table in a savebox to calculate the width of the table which will be stored in \wd0
 \begin{tblr}{hlines,vlines,measure=vbox,colspec={*{#1}{l}}}%
@@ -388,8 +424,7 @@
 \begin{longtblr}{hlines,vlines,% automatically set horizontal and vertical cell lines
                  measure=vbox,% needed to allow nested lists and tables
                  colspec={*{#1}{X[-1]}},% set column type for all columns
-                 rowhead=#4,% set which row is the header (0=disable, 1=enable)
-                 row{#4}={bg=\tableheadbgcolor,font=\bfseries}}% set header background color and font weight
+                 rowhead=#4} % set which row is the header (0=disable, 1=enable)
 #5
 \end{longtblr}%
 \else% use fixed left aligned columns
@@ -397,8 +432,7 @@
 \begin{longtblr}{hlines,vlines,% automatically set horizontal and vertical cell lines
                  measure=vbox,% needed to allow nested lists and tables
                  colspec={*{#1}{l}},% set column type for all columns
-                 rowhead=#4,% set which row is the header (0=disable, 1=enable)
-                 row{#4}={bg=\tableheadbgcolor,font=\bfseries}}% set header background color and font weight
+                 rowhead=#4} % set which row is the header (0=disable, 1=enable)
 #5
 \end{longtblr}%
 \fi%
@@ -414,8 +448,8 @@
 \begin{tblr}{hlines,vlines,% automatically set horizontal and vertical cell lines
              measure=vbox,% needed to allow nested lists and tables
 	     colspec={*{#1}{X[-1]}},% set column type for all columns
-             rowhead=#2,% set which row is the header (0=disable, 1=enable)
-	     row{#2}={bg=\tableheadbgcolor,font=\bfseries}}% set header background color and font weight
+             rowhead=#2% set which row is the header (0=disable, 1=enable)
+            }
 }{% no end marker needed anymore
 \end{tblr}
 }%
@@ -424,7 +458,7 @@
 % Arguments:
 % #1: Number of columns
 % #2: Initial format for tblr, i.e. format except for last column
-% #3: Title of the table ee.g. Params, Enumerator
+% #3: Title of the table e.g. Params, Enumerator
 % #4: Body
 \NewDocumentCommand{\DoxyParamTable}{m m +m +m}{%
   \SetTblrOuter[longtblr]{theme=DoxyTableBareTheme}% set table caption and label
@@ -444,8 +478,8 @@
           {vline{1-Z}={2-Z}{solid},%    show vertical lines for all rows except the first
            measure=vbox,%               needed to allow nested lists and tables
            colspec=\DoxyTableColSpec}}% set column type for all columns
-  \SetCell[c=#1]{l} \tf{#3} \\[1ex]%
-  \hline%
+  \SetCell[c=#1]{l} \tf{#3} \\\nopagebreak%
+  \hline\nopagebreak%
   #4
   \end{longtblr}%
   \par\addvspace{6pt}%

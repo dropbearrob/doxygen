@@ -830,12 +830,12 @@ static Definition *findScopeFromQualifiedName(NamespaceDefMutable *startScope,co
       // scope match between the used class and nestedNameSpecifier.
       for (const auto &usedName : g_usingDeclarations)
       {
-        //printf("Checking using class %s\n",usedName.c_str());
-        if (rightScopeMatch(usedName.c_str(),nestedNameSpecifier))
+        //printf("Checking using class %s\n",qPrint(usedName));
+        if (rightScopeMatch(usedName,nestedNameSpecifier))
         {
           // ui.currentKey() is the fully qualified name of nestedNameSpecifier
           // so use this instead.
-          QCString fqn = QCString(usedName) + scope.right(scope.length()-p);
+          QCString fqn = usedName + scope.right(scope.length()-p);
           resultScope = buildScopeFromQualifiedName(fqn,startScope->getLanguage(),nullptr);
           //printf("Creating scope from fqn=%s result %p\n",qPrint(fqn),resultScope);
           if (resultScope)
@@ -1035,7 +1035,8 @@ static void addClassToContext(const Entry *root)
     }
     std::unique_ptr<ArgumentList> tArgList;
     int i=0;
-    if ((root->lang==SrcLangExt::CSharp || root->lang==SrcLangExt::Java) && (i=fullName.findRev('<'))!=-1)
+    if ((root->lang==SrcLangExt::CSharp || root->lang==SrcLangExt::Java) &&
+        (i=fullName.find('<'))!=-1)
     {
       // a Java/C# generic class looks like a C++ specialization, so we need to split the
       // name and template arguments here
@@ -1226,7 +1227,7 @@ static void addConceptToContext(const Entry *root)
       {
         cd->setTemplateArguments(*tArgList);
       }
-      cd->setInitializer(root->initializer.str().c_str());
+      cd->setInitializer(root->initializer.str());
       // file definition containing the class cd
       cd->setBodySegment(root->startLine,root->bodyLine,root->endBodyLine);
       cd->setBodyDef(fd);
@@ -2545,8 +2546,7 @@ static MemberDef *addVariableToClass(
   mmd->setFromAnonymousMember(fromAnnMemb);
   //md->setIndentDepth(indentDepth);
   mmd->setBodySegment(root->startLine,root->bodyLine,root->endBodyLine);
-  std::string init = root->initializer.str();
-  mmd->setInitializer(init.c_str());
+  mmd->setInitializer(root->initializer.str());
   mmd->setMaxInitLines(root->initLines);
   mmd->setMemberGroupId(root->mGrpId);
   mmd->setMemberSpecifiers(root->spec);
@@ -2609,7 +2609,7 @@ static MemberDef *addVariableToFile(
     {
       static const reg::Ex re(R"(\a\w*)");
       reg::Match match;
-      std::string typ = ttype.str();
+      const std::string &typ = ttype.str();
       if (reg::search(typ,match,re))
       {
         QCString typeValue = match.str();
@@ -2771,8 +2771,7 @@ static MemberDef *addVariableToFile(
   mmd->addSectionsToDefinition(root->anchors);
   mmd->setFromAnonymousScope(fromAnnScope);
   mmd->setFromAnonymousMember(fromAnnMemb);
-  std::string init = root->initializer.str();
-  mmd->setInitializer(init.c_str());
+  mmd->setInitializer(root->initializer.str());
   mmd->setMaxInitLines(root->initLines);
   mmd->setMemberGroupId(root->mGrpId);
   mmd->setDefinition(def);
@@ -3722,7 +3721,6 @@ static void addMethodToClass(const Entry *root,ClassDefMutable *cd,
     // for PHP we use Class::method and Namespace\method
     scopeSeparator="::";
   }
-//  QCString optArgs = root->argList.empty() ? args : QCString();
   if (!relates.isEmpty() || isFriend || Config_getBool(HIDE_SCOPE_NAMES))
   {
     if (!type.isEmpty())
@@ -3890,7 +3888,7 @@ static void buildFunctionList(const Entry *root)
                root->fileName, root->startLine, root->bodyLine, root->tArgLists.size(), root->mGrpId,
                root->spec, root->proto, root->docFile);
 
-    bool isFriend=root->type.find("friend ")!=-1;
+    bool isFriend=root->type=="friend" || root->type.find("friend ")!=-1;
     QCString rname = removeRedundantWhiteSpace(root->name);
     //printf("rname=%s\n",qPrint(rname));
 
@@ -4044,14 +4042,13 @@ static void buildFunctionList(const Entry *root)
               bool staticsInDifferentFiles =
                 root->isStatic && md->isStatic() && root->fileName!=md->getDefFileName();
 
-              if (
-                  matchArguments2(md->getOuterScope(),mfd,&mdAl,
-                    rnd ? rnd : Doxygen::globalScope,rfd,&root->argList,
-                    FALSE,root->lang) &&
-                  sameTemplateArgs &&
+              if (sameTemplateArgs &&
                   matchingReturnTypes &&
                   sameRequiresClause &&
-                  !staticsInDifferentFiles
+                  !staticsInDifferentFiles &&
+                  matchArguments2(md->getOuterScope(),mfd,md->typeString(),&mdAl,
+                    rnd ? rnd : Doxygen::globalScope,rfd,root->type,&root->argList,
+                    FALSE,root->lang)
                  )
               {
                 GroupDef *gd=nullptr;
@@ -4206,8 +4203,8 @@ static void findFriends()
           //    mmd->isRelated(),mmd->isFriend(),mmd->isFunction());
           if (fmd && mmd &&
               (mmd->isFriend() || (mmd->isRelated() && mmd->isFunction())) &&
-              matchArguments2(mmd->getOuterScope(), mmd->getFileDef(), &mmd->argumentList(),
-                              fmd->getOuterScope(), fmd->getFileDef(), &fmd->argumentList(),
+              matchArguments2(mmd->getOuterScope(), mmd->getFileDef(), mmd->typeString(), &mmd->argumentList(),
+                              fmd->getOuterScope(), fmd->getFileDef(), fmd->typeString(), &fmd->argumentList(),
                               TRUE,mmd->getLanguage()
                              )
 
@@ -4345,8 +4342,8 @@ static void transferFunctionReferences()
       const ArgumentList &mdefAl = mdef->argumentList();
       const ArgumentList &mdecAl = mdec->argumentList();
       if (
-          matchArguments2(mdef->getOuterScope(),mdef->getFileDef(),const_cast<ArgumentList*>(&mdefAl),
-                          mdec->getOuterScope(),mdec->getFileDef(),const_cast<ArgumentList*>(&mdecAl),
+          matchArguments2(mdef->getOuterScope(),mdef->getFileDef(),mdef->typeString(),const_cast<ArgumentList*>(&mdefAl),
+                          mdec->getOuterScope(),mdec->getFileDef(),mdec->typeString(),const_cast<ArgumentList*>(&mdecAl),
                           TRUE,mdef->getLanguage()
             )
          ) /* match found */
@@ -4389,10 +4386,10 @@ static void transferRelatedFunctionDocumentation()
             //printf("  Member found: related='%d'\n",rmd->isRelated());
             if (rmd &&
                 (rmd->isRelated() || rmd->isForeign()) && // related function
-                matchArguments2( md->getOuterScope(), md->getFileDef(), &md->argumentList(),
-                  rmd->getOuterScope(),rmd->getFileDef(),&rmd->argumentList(),
-                  TRUE,md->getLanguage()
-                  )
+                matchArguments2( md->getOuterScope(), md->getFileDef(), md->typeString(), &md->argumentList(),
+                                rmd->getOuterScope(),rmd->getFileDef(),rmd->typeString(),&rmd->argumentList(),
+                                TRUE,md->getLanguage()
+                               )
                )
             {
               AUTO_TRACE_ADD("Found related member '{}'",md->name());
@@ -4557,8 +4554,6 @@ static void findUsedClassesForClass(const Entry *root,
             usedClassName = typeCd->name();
           }
 
-          int sp=usedClassName.find('<');
-          if (sp==-1) sp=0;
           // replace any namespace aliases
           replaceNamespaceAliases(usedClassName);
           // add any template arguments to the class
@@ -4740,11 +4735,11 @@ static void findTemplateInstanceRelation(const Entry *root,
                      root->fileName,root->startLine,root->startColumn,templSpec,freshInstance));
   if (instanceClass)
   {
-    instanceClass->setArtificial(TRUE);
-    instanceClass->setLanguage(root->lang);
-
     if (freshInstance)
     {
+      instanceClass->setArtificial(TRUE);
+      instanceClass->setLanguage(root->lang);
+
       AUTO_TRACE_ADD("found fresh instance '{}'",instanceClass->name());
       instanceClass->setTemplateBaseClassNames(templateNames);
 
@@ -4993,7 +4988,7 @@ static bool findClassRelation(
           auto it = Doxygen::namespaceAliasMap.find(baseClassName.str());
           if (it!=Doxygen::namespaceAliasMap.end()) // see if it is indeed a class.
           {
-            baseClass=getClassMutable(QCString(it->second.alias));
+            baseClass=getClassMutable(it->second.alias);
             found = baseClass!=nullptr && baseClass!=cd;
           }
         }
@@ -5568,8 +5563,8 @@ static void addMemberDocs(const Entry *root,
   else
   {
     if (
-          matchArguments2( md->getOuterScope(), md->getFileDef(),const_cast<ArgumentList*>(&mdAl),
-                           rscope,rfd,&root->argList,
+          matchArguments2( md->getOuterScope(), md->getFileDef(),md->typeString(),const_cast<ArgumentList*>(&mdAl),
+                           rscope,rfd,root->type,&root->argList,
                            TRUE, root->lang
                          )
        )
@@ -5618,7 +5613,7 @@ static void addMemberDocs(const Entry *root,
   if (md->initializer().isEmpty() && !rootInit.empty())
   {
     //printf("setInitializer\n");
-    md->setInitializer(rootInit.c_str());
+    md->setInitializer(rootInit);
   }
   if (md->requiresClause().isEmpty() && !root->req.isEmpty())
   {
@@ -5679,6 +5674,9 @@ static const ClassDef *findClassDefinition(FileDef *fd,NamespaceDef *nd,
 {
   SymbolResolver resolver(fd);
   const ClassDef *tcd = resolver.resolveClass(nd,scopeName,true,true);
+  //printf("findClassDefinition(fd=%s,ns=%s,scopeName=%s)='%s'\n",
+  //    qPrint(fd?fd->name():""),qPrint(nd?nd->name():""),
+  //    qPrint(scopeName),qPrint(tcd?tcd->name():""));
   return tcd;
 }
 
@@ -5824,8 +5822,8 @@ static bool findGlobalMember(const Entry *root,
         bool matching=
           (mdAl.empty() && root->argList.empty()) ||
           md->isVariable() || md->isTypedef() || /* in case of function pointers */
-          matchArguments2(md->getOuterScope(),md.get()->getFileDef(),&mdAl,
-                          rnd ? rnd : Doxygen::globalScope,fd,&root->argList,
+          matchArguments2(md->getOuterScope(),md->getFileDef(),md->typeString(),&mdAl,
+                          rnd ? rnd : Doxygen::globalScope,fd,root->type,&root->argList,
                           FALSE,root->lang);
 
         // for template members we need to check if the number of
@@ -6028,7 +6026,7 @@ static QCString substituteTemplatesInString(
   dst+=src.substr(p);
   //printf("  substituteTemplatesInString(%s)=%s\n",
   //    qPrint(src),qPrint(dst));
-  return QCString(dst);
+  return dst;
 }
 
 static void substituteTemplatesInArgList(
@@ -6202,8 +6200,8 @@ static void addMemberFunction(const Entry *root,
       // don't be fooled by anonymous scopes
       tcd=cd;
     }
-    //printf("Looking for %s inside nd=%s result=%p (%s) cd=%p\n",
-    //    qPrint(scopeName),nd?qPrint(nd->name()):"<none>",tcd,tcd?qPrint(tcd->name()):"",cd);
+    //printf("Looking for %s inside nd=%s result=%s cd=%s\n",
+    //    qPrint(scopeName),nd?qPrint(nd->name()):"<none>",tcd?qPrint(tcd->name()):"",qPrint(cd->name()));
 
     if (cd && tcd==cd) // member's classes match
     {
@@ -6222,7 +6220,7 @@ static void addMemberFunction(const Entry *root,
       //printf("defTemplArgs=%p\n",defTemplArgs);
 
       // do we replace the decl argument lists with the def argument lists?
-      bool substDone=FALSE;
+      bool substDone=false;
       ArgumentList argList;
 
       /* substitute the occurrences of class template names in the
@@ -6245,15 +6243,15 @@ static void addMemberFunction(const Entry *root,
         argList = mdAl;
       }
 
-      AUTO_TRACE_ADD("matching '{}'<=>'{}' className='{}' namespaceName='{}'",
-          argListToString(argList,TRUE),argListToString(root->argList,TRUE),className,namespaceName);
-
       bool matching=
         md->isVariable() || md->isTypedef() || // needed for function pointers
         matchArguments2(
-            md->getClassDef(),md->getFileDef(),&argList,
-            cd,fd,&root->argList,
+            md->getClassDef(),md->getFileDef(),md->typeString(),&argList,
+            cd,fd,root->type,&root->argList,
             TRUE,root->lang);
+
+      AUTO_TRACE_ADD("matching '{}'<=>'{}' className='{}' namespaceName='{}' result={}",
+          argListToString(argList,TRUE),argListToString(root->argList,TRUE),className,namespaceName,matching);
 
       if (md->getLanguage()==SrcLangExt::ObjC && md->isVariable() && root->section.isFunction())
       {
@@ -6269,8 +6267,20 @@ static void addMemberFunction(const Entry *root,
             className+"::",""); // see bug700693 & bug732594
         memType=substitute(stripTemplateSpecifiersFromScope(memType,TRUE),
             className+"::",""); // see bug758900
+        if (memType=="auto" && !argList.trailingReturnType().isEmpty())
+        {
+          memType = argList.trailingReturnType();
+          memType.stripPrefix(" -> ");
+        }
+        if (funcType=="auto" && !root->argList.trailingReturnType().isEmpty())
+        {
+          funcType = root->argList.trailingReturnType();
+          funcType.stripPrefix(" -> ");
+          argList.setTrailingReturnType(root->argList.trailingReturnType());
+          substDone=true;
+        }
         AUTO_TRACE_ADD("Comparing return types '{}'<->'{}' #args {}<->{}",
-            md->typeString(),funcType,md->templateArguments().size(),root->tArgLists.back().size());
+            memType,funcType,md->templateArguments().size(),root->tArgLists.back().size());
         if (md->templateArguments().size()!=root->tArgLists.back().size() || memType!=funcType)
         {
           //printf(" ---> no matching\n");
@@ -6694,6 +6704,11 @@ static void findMember(const Entry *root,
       spec.setMutable(true);
       done=false;
     }
+    if (funcDecl.stripPrefix("thread_local "))
+    {
+      spec.setThreadLocal(true);
+      done=false;
+    }
     if (funcDecl.stripPrefix("virtual "))
     {
       done=false;
@@ -7071,8 +7086,8 @@ static void findMember(const Entry *root,
 
                 newMember=
                   className!=rmd->getOuterScope()->name() ||
-                  !matchArguments2(rmd->getOuterScope(),rmd->getFileDef(),&rmdAl,
-                      cd,fd,&root->argList,
+                  !matchArguments2(rmd->getOuterScope(),rmd->getFileDef(),rmd->typeString(),&rmdAl,
+                      cd,fd,root->type,&root->argList,
                       TRUE,root->lang);
                 if (!newMember)
                 {
@@ -7159,8 +7174,8 @@ static void findMember(const Entry *root,
                     const ArgumentList &rmdAl = rmd->argumentList();
                     // check for matching argument lists
                     if (
-                        matchArguments2(rmd->getOuterScope(),rmd->getFileDef(),&rmdAl,
-                          cd,fd,&root->argList,
+                        matchArguments2(rmd->getOuterScope(),rmd->getFileDef(),rmd->typeString(),&rmdAl,
+                          cd,fd,root->type,&root->argList,
                           TRUE,root->lang)
                        )
                     {
@@ -7797,8 +7812,7 @@ static void addEnumValuesToEnums(const Entry *root)
                   fmmd->setDocumentation(e->doc,e->docFile,e->docLine);
                   fmmd->setBriefDescription(e->brief,e->briefFile,e->briefLine);
                   fmmd->addSectionsToDefinition(e->anchors);
-                  std::string init = e->initializer.str();
-                  fmmd->setInitializer(init.c_str());
+                  fmmd->setInitializer(e->initializer.str());
                   fmmd->setMaxInitLines(e->initLines);
                   fmmd->setMemberGroupId(e->mGrpId);
                   fmmd->setExplicitExternal(e->explicitExternal,fileName,e->startLine,e->startColumn);
@@ -8200,7 +8214,7 @@ static void addToIndices()
         {
           const auto &match = *it;
           std::string matchStr = match.str();
-          Doxygen::searchIndex.addWord(matchStr.c_str(),true);
+          Doxygen::searchIndex.addWord(matchStr,true);
         }
       }
   };
@@ -8371,8 +8385,8 @@ static void computeMemberRelationsForBaseClass(const ClassDef *cd,const BaseClas
                   //      );
                   if (
                       lang==SrcLangExt::Python ||
-                      matchArguments2(bmd->getOuterScope(),bmd->getFileDef(),&bmdAl,
-                        md->getOuterScope(), md->getFileDef(), &mdAl,
+                      matchArguments2(bmd->getOuterScope(),bmd->getFileDef(),bmd->typeString(),&bmdAl,
+                        md->getOuterScope(), md->getFileDef(), md->typeString(),&mdAl,
                         TRUE,lang
                         )
                      )
@@ -8554,12 +8568,12 @@ static void generateFileSources()
             for (auto incFile : clangParser->filesInSameTU())
             {
               if (filesToProcess.find(incFile)!=filesToProcess.end() &&  // part of input
-                  fd->absFilePath()!=QCString(incFile) &&                // not same file
+                  fd->absFilePath()!=incFile &&                          // not same file
                   processedFiles.find(incFile)==processedFiles.end())    // not yet marked as processed
               {
                 StringVector moreFiles;
                 bool ambig = false;
-                FileDef *ifd=findFileDef(Doxygen::inputNameLinkedMap,incFile.c_str(),ambig);
+                FileDef *ifd=findFileDef(Doxygen::inputNameLinkedMap,incFile,ambig);
                 if (ifd && !ifd->isReference())
                 {
                   processSourceFile(ifd,*g_outputList,clangParser.get());
@@ -9456,15 +9470,13 @@ static void flushUnresolvedRelations()
 // Returns TRUE if the entry and member definition have equal file names,
 // otherwise FALSE.
 
-static bool haveEqualFileNames(const Entry *root,const MemberDef *md)
+static bool haveEqualFileNames(const Entry *root, const MemberDef *md)
 {
-  const FileDef *fd = md->getFileDef();
-  if (!fd)
+  if (const FileDef *fd = md->getFileDef())
   {
-    return FALSE;
+    return fd->absFilePath() == root->fileName;
   }
-
-  return fd->absFilePath() == root->fileName;
+  return false;
 }
 
 //----------------------------------------------------------------------------
@@ -9981,7 +9993,7 @@ static void generateExampleDocs()
       intf->resetCodeParserState();
     }
     QCString n=pd->getOutputFileBase();
-    startFile(*g_outputList,n,n,pd->name());
+    startFile(*g_outputList,n,false,n,pd->name());
     startTitle(*g_outputList,n);
     g_outputList->docify(pd->name());
     endTitle(*g_outputList,n,QCString());
@@ -9991,18 +10003,15 @@ static void generateExampleDocs()
     {
       lineNoOptStr="{lineno}";
     }
-    g_outputList->generateDoc(pd->docFile(),                       // file
-                         pd->docLine(),                            // startLine
-                         pd.get(),                                 // context
-                         nullptr,                                  // memberDef
-                         (pd->briefDescription().isEmpty()?"":pd->briefDescription()+"\n\n")+
-                         pd->documentation()+"\n\n\\include"+lineNoOptStr+" "+pd->name(), // docs
-                         TRUE,                                     // index words
-                         TRUE,                                     // is example
-                         pd->name(),
-                         FALSE,
-                         FALSE
-                        );
+    g_outputList->generateDoc(pd->docFile(),                            // file
+                              pd->docLine(),                            // startLine
+                              pd.get(),                                 // context
+                              nullptr,                                  // memberDef
+                              (pd->briefDescription().isEmpty()?"":pd->briefDescription()+"\n\n")+
+                              pd->documentation()+"\n\n\\include"+lineNoOptStr+" "+pd->name(), // docs
+                              DocOptions()
+                              .setIndexWords(true)
+                              .setExample(pd->name()));
     endFile(*g_outputList); // contains g_outputList->endContents()
   }
   g_outputList->enable(OutputType::Man);
@@ -10338,7 +10347,7 @@ static void readTagFile(const std::shared_ptr<Entry> &root,const QCString &tagLi
     return;
   }
 
-  if (Doxygen::tagFileSet.find(fi.absFilePath().c_str()) != Doxygen::tagFileSet.end()) return;
+  if (Doxygen::tagFileSet.find(fi.absFilePath()) != Doxygen::tagFileSet.end()) return;
 
   Doxygen::tagFileSet.emplace(fi.absFilePath());
 
@@ -10376,11 +10385,11 @@ static void copyLatexStyleSheet()
       else
       {
         QCString destFileName = Config_getString(LATEX_OUTPUT)+"/"+fi.fileName();
-        if (!checkExtension(fi.fileName().c_str(), LATEX_STYLE_EXTENSION))
+        if (!checkExtension(fi.fileName(), LATEX_STYLE_EXTENSION))
         {
           destFileName += LATEX_STYLE_EXTENSION;
         }
-        copyFile(QCString(fileName), destFileName);
+        copyFile(fileName, destFileName);
       }
     }
   }
@@ -10434,7 +10443,7 @@ static void copyStyleSheet()
       else
       {
         QCString destFileName = Config_getString(HTML_OUTPUT)+"/"+fi.fileName();
-        copyFile(QCString(fileName), destFileName);
+        copyFile(fileName, destFileName);
       }
     }
   }
@@ -10460,7 +10469,7 @@ static void copyLogo(const QCString &outputOption)
     {
       QCString destFileName = outputOption+"/"+fi.fileName();
       copyFile(projectLogo,destFileName);
-      Doxygen::indexList->addImageFile(fi.fileName().c_str());
+      Doxygen::indexList->addImageFile(fi.fileName());
     }
   }
 }
@@ -10485,7 +10494,7 @@ static void copyIcon(const QCString &outputOption)
     {
       QCString destFileName = outputOption+"/"+fi.fileName();
       copyFile(projectIcon,destFileName);
-      Doxygen::indexList->addImageFile(fi.fileName().c_str());
+      Doxygen::indexList->addImageFile(fi.fileName());
     }
   }
 }
@@ -10508,8 +10517,8 @@ static void copyExtraFiles(const StringVector &files,const QCString &filesOption
       else
       {
         QCString destFileName = outputOption+"/"+fi.fileName();
-        Doxygen::indexList->addImageFile(fi.fileName().c_str());
-        copyFile(QCString(fileName), destFileName);
+        Doxygen::indexList->addImageFile(fi.fileName());
+        copyFile(fileName, destFileName);
       }
     }
   }
@@ -10638,7 +10647,7 @@ static std::shared_ptr<Entry> parseFile(OutlineParserInterface &parser,
     for (const auto &s : includePath)
     {
       std::string absPath = FileInfo(s).absFilePath();
-      preprocessor.addSearchDir(absPath.c_str());
+      preprocessor.addSearchDir(absPath);
     }
     std::string inBuf;
     msg("Preprocessing {}...\n",fn);
@@ -10697,24 +10706,26 @@ static void parseFilesMultiThreading(const std::shared_ptr<Entry> &root)
     for (const auto &s : g_inputFiles)
     {
       bool ambig = false;
-      FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,s.c_str(),ambig);
+      QCString qs = s;
+      FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,qs,ambig);
       ASSERT(fd!=nullptr);
       if (fd->isSource() && !fd->isReference() && fd->getLanguage()==SrcLangExt::Cpp) // this is a source file
       {
         // lambda representing the work to executed by a thread
-        auto processFile = [s,&filesToProcess,&processedFilesLock,&processedFiles]() {
+        auto processFile = [qs,&filesToProcess,&processedFilesLock,&processedFiles]() {
           bool ambig_l = false;
           std::vector< std::shared_ptr<Entry> > roots;
-          FileDef *fd_l = findFileDef(Doxygen::inputNameLinkedMap,s.c_str(),ambig_l);
+          FileDef *fd_l = findFileDef(Doxygen::inputNameLinkedMap,qs,ambig_l);
           auto clangParser = ClangParser::instance()->createTUParser(fd_l);
-          auto parser = getParserForFile(s.c_str());
-          auto fileRoot { parseFile(*parser.get(),fd_l,s.c_str(),clangParser.get(),true) };
+          auto parser = getParserForFile(qs);
+          auto fileRoot { parseFile(*parser.get(),fd_l,qs,clangParser.get(),true) };
           roots.push_back(fileRoot);
 
           // Now process any include files in the same translation unit
           // first. When libclang is used this is much more efficient.
           for (auto incFile : clangParser->filesInSameTU())
           {
+            QCString qincFile = incFile;
             if (filesToProcess.find(incFile)!=filesToProcess.end())
             {
               bool needsToBeProcessed = false;
@@ -10723,13 +10734,13 @@ static void parseFilesMultiThreading(const std::shared_ptr<Entry> &root)
                 needsToBeProcessed = processedFiles.find(incFile)==processedFiles.end();
                 if (needsToBeProcessed) processedFiles.insert(incFile);
               }
-              if (incFile!=s && needsToBeProcessed)
+              if (qincFile!=qs && needsToBeProcessed)
               {
-                FileDef *ifd=findFileDef(Doxygen::inputNameLinkedMap,incFile.c_str(),ambig_l);
+                FileDef *ifd=findFileDef(Doxygen::inputNameLinkedMap,qincFile,ambig_l);
                 if (ifd && !ifd->isReference())
                 {
-                  //printf("  Processing %s in same translation unit as %s\n",incFile,s->c_str());
-                  fileRoot = parseFile(*parser.get(),ifd,incFile.c_str(),clangParser.get(),false);
+                  //printf("  Processing %s in same translation unit as %s\n",incFile,qPrint(s));
+                  fileRoot = parseFile(*parser.get(),ifd,qincFile,clangParser.get(),false);
                   roots.push_back(fileRoot);
                 }
               }
@@ -10759,19 +10770,20 @@ static void parseFilesMultiThreading(const std::shared_ptr<Entry> &root)
         // lambda representing the work to executed by a thread
         auto processFile = [s]() {
           bool ambig = false;
+          QCString qs = s;
           std::vector< std::shared_ptr<Entry> > roots;
-          FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,s.c_str(),ambig);
-          auto parser { getParserForFile(s.c_str()) };
-          bool useClang = getLanguageFromFileName(s.c_str())==SrcLangExt::Cpp;
+          FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,qs,ambig);
+          auto parser { getParserForFile(qs) };
+          bool useClang = getLanguageFromFileName(qs)==SrcLangExt::Cpp;
           if (useClang)
           {
             auto clangParser = ClangParser::instance()->createTUParser(fd);
-            auto fileRoot = parseFile(*parser.get(),fd,s.c_str(),clangParser.get(),true);
+            auto fileRoot = parseFile(*parser.get(),fd,qs,clangParser.get(),true);
             roots.push_back(fileRoot);
           }
           else
           {
-            auto fileRoot = parseFile(*parser.get(),fd,s.c_str(),nullptr,true);
+            auto fileRoot = parseFile(*parser.get(),fd,qs,nullptr,true);
             roots.push_back(fileRoot);
           }
           return roots;
@@ -10802,9 +10814,10 @@ static void parseFilesMultiThreading(const std::shared_ptr<Entry> &root)
       // lambda representing the work to executed by a thread
       auto processFile = [s]() {
         bool ambig = false;
-        FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,s.c_str(),ambig);
-        auto parser = getParserForFile(s.c_str());
-        auto fileRoot = parseFile(*parser.get(),fd,s.c_str(),nullptr,true);
+        QCString qs = s;
+        FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,qs,ambig);
+        auto parser = getParserForFile(qs);
+        auto fileRoot = parseFile(*parser.get(),fd,qs,nullptr,true);
         return fileRoot;
       };
       // dispatch the work and collect the future results
@@ -10838,13 +10851,14 @@ static void parseFilesSingleThreading(const std::shared_ptr<Entry> &root)
     for (const auto &s : g_inputFiles)
     {
       bool ambig = false;
-      FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,s.c_str(),ambig);
+      QCString qs =s;
+      FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,qs,ambig);
       ASSERT(fd!=nullptr);
-      if (fd->isSource() && !fd->isReference() && getLanguageFromFileName(s.c_str())==SrcLangExt::Cpp) // this is a source file
+      if (fd->isSource() && !fd->isReference() && getLanguageFromFileName(qs)==SrcLangExt::Cpp) // this is a source file
       {
         auto clangParser = ClangParser::instance()->createTUParser(fd);
-        auto parser { getParserForFile(s.c_str()) };
-        auto fileRoot = parseFile(*parser.get(),fd,s.c_str(),clangParser.get(),true);
+        auto parser { getParserForFile(qs) };
+        auto fileRoot = parseFile(*parser.get(),fd,qs,clangParser.get(),true);
         root->moveToSubEntryAndKeep(fileRoot);
         processedFiles.insert(s);
 
@@ -10852,15 +10866,15 @@ static void parseFilesSingleThreading(const std::shared_ptr<Entry> &root)
         // first. When libclang is used this is much more efficient.
         for (auto incFile : clangParser->filesInSameTU())
         {
-          //printf("    file %s\n",incFile.c_str());
+          //printf("    file %s\n",qPrint(incFile));
           if (filesToProcess.find(incFile)!=filesToProcess.end() && // file need to be processed
               processedFiles.find(incFile)==processedFiles.end())   // and is not processed already
           {
-            FileDef *ifd=findFileDef(Doxygen::inputNameLinkedMap,incFile.c_str(),ambig);
+            FileDef *ifd=findFileDef(Doxygen::inputNameLinkedMap,incFile,ambig);
             if (ifd && !ifd->isReference())
             {
-              //printf("  Processing %s in same translation unit as %s\n",incFile.c_str(),s.c_str());
-              fileRoot = parseFile(*parser.get(),ifd,incFile.c_str(),clangParser.get(),false);
+              //printf("  Processing %s in same translation unit as %s\n",qPrint(incFile),qPrint(qs));
+              fileRoot = parseFile(*parser.get(),ifd,incFile,clangParser.get(),false);
               root->moveToSubEntryAndKeep(fileRoot);
               processedFiles.insert(incFile);
             }
@@ -10874,18 +10888,19 @@ static void parseFilesSingleThreading(const std::shared_ptr<Entry> &root)
       if (processedFiles.find(s)==processedFiles.end()) // not yet processed
       {
         bool ambig = false;
-        FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,s.c_str(),ambig);
-        if (getLanguageFromFileName(s.c_str())==SrcLangExt::Cpp) // not yet processed
+        QCString qs = s;
+        FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,qs,ambig);
+        if (getLanguageFromFileName(qs)==SrcLangExt::Cpp) // not yet processed
         {
           auto clangParser = ClangParser::instance()->createTUParser(fd);
-          auto parser { getParserForFile(s.c_str()) };
-          auto fileRoot = parseFile(*parser.get(),fd,s.c_str(),clangParser.get(),true);
+          auto parser { getParserForFile(qs) };
+          auto fileRoot = parseFile(*parser.get(),fd,qs,clangParser.get(),true);
           root->moveToSubEntryAndKeep(fileRoot);
         }
         else
         {
-          std::unique_ptr<OutlineParserInterface> parser { getParserForFile(s.c_str()) };
-          std::shared_ptr<Entry> fileRoot = parseFile(*parser.get(),fd,s.c_str(),nullptr,true);
+          std::unique_ptr<OutlineParserInterface> parser { getParserForFile(qs) };
+          std::shared_ptr<Entry> fileRoot = parseFile(*parser.get(),fd,qs,nullptr,true);
           root->moveToSubEntryAndKeep(fileRoot);
         }
         processedFiles.insert(s);
@@ -10898,10 +10913,11 @@ static void parseFilesSingleThreading(const std::shared_ptr<Entry> &root)
     for (const auto &s : g_inputFiles)
     {
       bool ambig = false;
-      FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,s.c_str(),ambig);
+      QCString qs = s;
+      FileDef *fd=findFileDef(Doxygen::inputNameLinkedMap,qs,ambig);
       ASSERT(fd!=nullptr);
-      std::unique_ptr<OutlineParserInterface> parser { getParserForFile(s.c_str()) };
-      std::shared_ptr<Entry> fileRoot = parseFile(*parser.get(),fd,s.c_str(),nullptr,true);
+      std::unique_ptr<OutlineParserInterface> parser { getParserForFile(qs) };
+      std::shared_ptr<Entry> fileRoot = parseFile(*parser.get(),fd,qs,nullptr,true);
       root->moveToSubEntryAndKeep(std::move(fileRoot));
     }
   }
@@ -11026,6 +11042,13 @@ static void readDir(FileInfo *fi,
   for (const auto &dirEntry : dir.iterator())
   {
     FileInfo cfi(dirEntry.path());
+    auto checkPatterns = [&]() -> bool
+    {
+      return (patList==nullptr     ||  patternMatch(cfi,*patList)) &&
+             (exclPatList==nullptr || !patternMatch(cfi,*exclPatList)) &&
+             (killSet==nullptr     ||  killSet->find(cfi.absFilePath())==killSet->end());
+    };
+
     if (exclSet==nullptr || exclSet->find(cfi.absFilePath())==exclSet->end())
     { // file should not be excluded
       //printf("killSet->find(%s)\n",qPrint(cfi->absFilePath()));
@@ -11034,27 +11057,23 @@ static void readDir(FileInfo *fi,
       }
       else if (!cfi.exists() || !cfi.isReadable())
       {
-        if (errorIfNotExist)
+        if (errorIfNotExist && checkPatterns())
         {
           warn_uncond("source '{}' is not a readable file or directory... skipping.\n",cfi.absFilePath());
         }
       }
-      else if (cfi.isFile() &&
-          (patList==nullptr || patternMatch(cfi,*patList)) &&
-          (exclPatList==nullptr || !patternMatch(cfi,*exclPatList)) &&
-          (killSet==nullptr || killSet->find(cfi.absFilePath())==killSet->end())
-          )
+      else if (cfi.isFile() && checkPatterns())
       {
         std::string name=cfi.fileName();
         std::string path=cfi.dirPath()+"/";
         std::string fullName=path+name;
         if (fnMap)
         {
-          auto fd = createFileDef(QCString(path),QCString(name));
+          auto fd = createFileDef(path,name);
           FileName *fn=nullptr;
           if (!name.empty())
           {
-            fn = fnMap->add(QCString(name),QCString(fullName));
+            fn = fnMap->add(name,fullName);
             fn->push_back(std::move(fd));
           }
         }
@@ -11139,10 +11158,10 @@ void readFileOrDirectory(const QCString &s,
           std::string name=fi.fileName();
           if (fnMap)
           {
-            auto fd = createFileDef(QCString(dirPath+"/"),QCString(name));
+            auto fd = createFileDef(dirPath+"/",name);
             if (!name.empty())
             {
-              FileName *fn = fnMap->add(QCString(name),QCString(filePath));
+              FileName *fn = fnMap->add(name,filePath);
               fn->push_back(std::move(fd));
             }
           }
@@ -11469,7 +11488,11 @@ static int computeIdealCacheParam(size_t v)
   //printf("computeIdealCacheParam(v=%u)\n",v);
 
   int r=0;
-  while (v!=0) v>>=1,r++;
+  while (v!=0)
+  {
+    v >>= 1;
+    r++;
+  }
   // r = log2(v)
 
   // convert to a valid cache size value
@@ -11949,7 +11972,7 @@ void adjustConfiguration()
   const StringVector &extMaps = Config_getList(EXTENSION_MAPPING);
   for (const auto &mapping : extMaps)
   {
-    QCString mapStr = mapping.c_str();
+    QCString mapStr = mapping;
     int i=mapStr.find('=');
     if (i==-1)
     {
@@ -11996,7 +12019,7 @@ void adjustConfiguration()
   const StringVector &fileEncod = Config_getList(INPUT_FILE_ENCODING);
   for (const auto &mapping : fileEncod)
   {
-    QCString mapStr = mapping.c_str();
+    QCString mapStr = mapping;
     int i=mapStr.find('=');
     if (i==-1)
     {
@@ -12030,7 +12053,7 @@ void adjustConfiguration()
   const StringVector &expandAsDefinedList =Config_getList(EXPAND_AS_DEFINED);
   for (const auto &s : expandAsDefinedList)
   {
-    Doxygen::expandAsDefinedSet.insert(s.c_str());
+    Doxygen::expandAsDefinedSet.insert(s);
   }
 
   // read aliases and store them in a dictionary
@@ -12192,7 +12215,7 @@ void searchInputFiles()
     size_t plSize = Config_getList(INCLUDE_FILE_PATTERNS).size();
     const StringVector &pl = plSize==0 ? Config_getList(FILE_PATTERNS) :
                                          Config_getList(INCLUDE_FILE_PATTERNS);
-    readFileOrDirectory(s.c_str(),                     // s
+    readFileOrDirectory(s,                             // s
                         Doxygen::includeNameLinkedMap, // fnDict
                         nullptr,                       // exclSet
                         &pl,                           // patList
@@ -12210,7 +12233,7 @@ void searchInputFiles()
   const StringVector &examplePathList = Config_getList(EXAMPLE_PATH);
   for (const auto &s : examplePathList)
   {
-    readFileOrDirectory(s.c_str(),                                              // s
+    readFileOrDirectory(s,                                                      // s
                         Doxygen::exampleNameLinkedMap,                          // fnDict
                         nullptr,                                                // exclSet
                         &Config_getList(EXAMPLE_PATTERNS),                      // patList
@@ -12228,7 +12251,7 @@ void searchInputFiles()
   const StringVector &imagePathList=Config_getList(IMAGE_PATH);
   for (const auto &s : imagePathList)
   {
-    readFileOrDirectory(s.c_str(),                        // s
+    readFileOrDirectory(s,                                // s
                         Doxygen::imageNameLinkedMap,      // fnDict
                         nullptr,                          // exclSet
                         nullptr,                          // patList
@@ -12246,7 +12269,7 @@ void searchInputFiles()
   const StringVector &dotFileList=Config_getList(DOTFILE_DIRS);
   for (const auto &s : dotFileList)
   {
-    readFileOrDirectory(s.c_str(),                      // s
+    readFileOrDirectory(s,                              // s
                         Doxygen::dotFileNameLinkedMap,  // fnDict
                         nullptr,                        // exclSet
                         nullptr,                        // patList
@@ -12264,7 +12287,7 @@ void searchInputFiles()
   const StringVector &mscFileList=Config_getList(MSCFILE_DIRS);
   for (const auto &s : mscFileList)
   {
-    readFileOrDirectory(s.c_str(),                       // s
+    readFileOrDirectory(s,                               // s
                         Doxygen::mscFileNameLinkedMap,   // fnDict
                         nullptr,                         // exclSet
                         nullptr,                         // patList
@@ -12282,7 +12305,7 @@ void searchInputFiles()
   const StringVector &diaFileList=Config_getList(DIAFILE_DIRS);
   for (const auto &s : diaFileList)
   {
-    readFileOrDirectory(s.c_str(),                         // s
+    readFileOrDirectory(s,                                 // s
                         Doxygen::diaFileNameLinkedMap,     // fnDict
                         nullptr,                           // exclSet
                         nullptr,                           // patList
@@ -12300,7 +12323,7 @@ void searchInputFiles()
   const StringVector &plantUmlFileList=Config_getList(PLANTUMLFILE_DIRS);
   for (const auto &s : plantUmlFileList)
   {
-    readFileOrDirectory(s.c_str(),                         // s
+    readFileOrDirectory(s,                                 // s
                         Doxygen::plantUmlFileNameLinkedMap,// fnDict
                         nullptr,                           // exclSet
                         nullptr,                           // patList
@@ -12317,7 +12340,7 @@ void searchInputFiles()
   const StringVector &excludeList = Config_getList(EXCLUDE);
   for (const auto &s : excludeList)
   {
-    readFileOrDirectory(s.c_str(),                          // s
+    readFileOrDirectory(s,                                  // s
                         nullptr,                            // fnDict
                         nullptr,                            // exclSet
                         &Config_getList(FILE_PATTERNS),     // patList
@@ -12339,7 +12362,7 @@ void searchInputFiles()
   const StringVector &inputList=Config_getList(INPUT);
   for (const auto &s : inputList)
   {
-    QCString path=s.c_str();
+    QCString path = s;
     size_t l = path.length();
     if (l>0)
     {
@@ -12464,7 +12487,7 @@ void parseInput()
   {
     if (outputDirectory.isEmpty())
     {
-      outputDirectory = Config_updateString(OUTPUT_DIRECTORY,Dir::currentDirPath().c_str());
+      outputDirectory = Config_updateString(OUTPUT_DIRECTORY,Dir::currentDirPath());
     }
     else
     {
@@ -12484,7 +12507,7 @@ void parseInput()
         }
         dir.setPath(outputDirectory.str());
       }
-      outputDirectory = Config_updateString(OUTPUT_DIRECTORY,dir.absPath().c_str());
+      outputDirectory = Config_updateString(OUTPUT_DIRECTORY,dir.absPath());
     }
   }
   AUTO_TRACE_ADD("outputDirectory={}",outputDirectory);

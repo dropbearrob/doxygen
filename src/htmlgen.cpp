@@ -325,7 +325,8 @@ static QCString substituteHtmlKeywords(const QCString &file,
                                        const QCString &str,
                                        const QCString &title,
                                        const QCString &relPath,
-                                       const QCString &navPath=QCString())
+                                       const QCString &navPath=QCString(),
+                                       bool isSource = false)
 {
   // Build CSS/JavaScript tags depending on treeview, search engine settings
   QCString cssFile;
@@ -341,7 +342,6 @@ static QCString substituteHtmlKeywords(const QCString &file,
   bool searchEngine = Config_getBool(SEARCHENGINE);
   bool serverBasedSearch = Config_getBool(SERVER_BASED_SEARCH);
   bool mathJax = Config_getBool(USE_MATHJAX);
-  QCString mathJaxFormat = Config_getEnumAsString(MATHJAX_FORMAT);
   bool disableIndex = Config_getBool(DISABLE_INDEX);
   bool hasProjectName = !projectName.isEmpty();
   bool hasProjectNumber = !Config_getString(PROJECT_NUMBER).isEmpty();
@@ -380,7 +380,7 @@ static QCString substituteHtmlKeywords(const QCString &file,
   {
     if (!fileName.empty())
     {
-      QCString htmlStyleSheet = fileName.c_str();
+      QCString htmlStyleSheet = fileName;
       if (htmlStyleSheet.startsWith("http:") || htmlStyleSheet.startsWith("https:"))
       {
         extraCssText += "<link href=\""+htmlStyleSheet+"\" rel=\"stylesheet\" type=\"text/css\"/>\n";
@@ -390,7 +390,7 @@ static QCString substituteHtmlKeywords(const QCString &file,
         FileInfo fi(fileName);
         if (fi.exists())
         {
-          extraCssText += "<link href=\"$relpath^"+stripPath(fileName.c_str())+"\" rel=\"stylesheet\" type=\"text/css\"/>\n";
+          extraCssText += "<link href=\"$relpath^"+stripPath(fileName)+"\" rel=\"stylesheet\" type=\"text/css\"/>\n";
         }
       }
     }
@@ -453,7 +453,7 @@ static QCString substituteHtmlKeywords(const QCString &file,
     searchBox = getSearchBox(serverBasedSearch, relPath, FALSE);
   }
 
-  if (mathJax)
+  if (mathJax && !isSource)
   {
     auto mathJaxVersion = Config_getEnum(MATHJAX_VERSION);
     QCString path = Config_getString(MATHJAX_RELPATH);
@@ -462,80 +462,119 @@ static QCString substituteHtmlKeywords(const QCString &file,
       path.prepend(relPath);
     }
 
+    auto writeMathJax3Packages = [&mathJaxJs](const StringVector &mathJaxExtensions)
+    {
+      mathJaxJs += "    packages: ['base','configmacros'";
+      if (!g_latex_macro.isEmpty())
+      {
+        mathJaxJs+= ",'newcommand'";
+      }
+      for (const auto &s : mathJaxExtensions)
+      {
+        mathJaxJs+= ",'"+s+"'";
+      }
+      mathJaxJs += "]\n";
+    };
+
+    auto writeMathJax4Packages = [&mathJaxJs](const StringVector &mathJaxExtensions)
+    {
+      mathJaxJs += "    packages: {\n";
+      bool first = true;
+      for (const auto &s : mathJaxExtensions)
+      {
+        if (!first) mathJaxJs+= ",";
+        if (s.at(0) =='-')
+        {
+          mathJaxJs+= "\n        '[-]': ['";
+          mathJaxJs+=s.data()+1;
+          mathJaxJs+="']";
+        }
+        else
+        {
+          mathJaxJs+= "\n        '[+]': ['"+s+"']";
+        }
+        first = false;
+      }
+      mathJaxJs += "\n    }\n";
+    };
+
+    auto writeMathJaxScript = [&path,&mathJaxJs](const QCString &pathPostfix,
+                                                 std::function<void(const StringVector&)> writePackages)
+    {
+      QCString mathJaxFormat = Config_getEnumAsString(MATHJAX_FORMAT);
+      mathJaxJs += "<script type=\"text/javascript\">\n"
+        "window.MathJax = {\n"
+        "  options: {\n"
+        "    ignoreHtmlClass: 'tex2jax_ignore',\n"
+        "    processHtmlClass: 'tex2jax_process'\n"
+        "  }";
+      // MACRO / EXT
+      const StringVector &mathJaxExtensions = Config_getList(MATHJAX_EXTENSIONS);
+      if (!mathJaxExtensions.empty() || !g_latex_macro.isEmpty())
+      {
+        mathJaxJs+= ",\n";
+        if (!mathJaxExtensions.empty())
+        {
+          bool first = true;
+          mathJaxJs+= "  loader: {\n"
+                      "    load: [";
+          for (const auto &s : mathJaxExtensions)
+          {
+            if (s.at(0) !='-')
+            {
+              if (!first) mathJaxJs+= ",";
+              mathJaxJs+= "'[tex]/"+s+"'"; // packages preceded by a minus sign should not be loaded
+              first = false;
+            }
+          }
+          mathJaxJs+= "]\n"
+                      "  },\n";
+        }
+        mathJaxJs+= "  tex: {\n"
+                    "    macros: {";
+        if (!g_latex_macro.isEmpty())
+        {
+          mathJaxJs += g_latex_macro+"    ";
+        }
+        mathJaxJs+="},\n";
+        writePackages(mathJaxExtensions);
+        mathJaxJs += "  }\n";
+      }
+      else
+      {
+        mathJaxJs += "\n";
+      }
+      mathJaxJs += "};\n";
+      // MATHJAX_CODEFILE
+      if (!g_mathjax_code.isEmpty())
+      {
+        mathJaxJs += g_mathjax_code;
+        mathJaxJs += "\n";
+      }
+      mathJaxJs+="</script>\n";
+      mathJaxJs += "<script type=\"text/javascript\" id=\"MathJax-script\" async=\"async\" src=\"" +
+        path + pathPostfix + "tex-" + mathJaxFormat.lower() + ".js\">";
+      mathJaxJs+="</script>\n";
+    };
+
     switch (mathJaxVersion)
     {
+      case MATHJAX_VERSION_t::MathJax_4:
+        writeMathJaxScript("",writeMathJax4Packages);
+        break;
       case MATHJAX_VERSION_t::MathJax_3:
-        {
-          mathJaxJs += // "<script src=\"https://polyfill.io/v3/polyfill.min.js?features=es6\"></script>\n" // needed for IE11 only, see #10354
-                       "<script type=\"text/javascript\">\n"
-                       "window.MathJax = {\n"
-                       "  options: {\n"
-                       "    ignoreHtmlClass: 'tex2jax_ignore',\n"
-                       "    processHtmlClass: 'tex2jax_process'\n"
-                       "  }";
-         const StringVector &mathJaxExtensions = Config_getList(MATHJAX_EXTENSIONS);
-         if (!mathJaxExtensions.empty() || !g_latex_macro.isEmpty())
-         {
-           mathJaxJs+= ",\n";
-           if (!mathJaxExtensions.empty())
-           {
-             bool first = true;
-             mathJaxJs+= "  loader: {\n"
-                         "    load: [";
-             for (const auto &s : mathJaxExtensions)
-             {
-               if (!first) mathJaxJs+= ",";
-               mathJaxJs+= "'[tex]/"+QCString(s.c_str())+"'";
-               first = false;
-             }
-             mathJaxJs+= "]\n"
-                         "  },\n";
-           }
-           mathJaxJs+= "  tex: {\n"
-                       "    macros: {";
-           if (!g_latex_macro.isEmpty())
-           {
-             mathJaxJs += g_latex_macro+"    ";
-           }
-           mathJaxJs+="},\n"
-                       "    packages: ['base','configmacros'";
-           if (!g_latex_macro.isEmpty())
-           {
-             mathJaxJs+= ",'newcommand'";
-           }
-           for (const auto &s : mathJaxExtensions)
-           {
-             mathJaxJs+= ",'"+QCString(s.c_str())+"'";
-           }
-           mathJaxJs += "]\n"
-                         "  }\n";
-         }
-         else
-         {
-           mathJaxJs += "\n";
-         }
-         mathJaxJs += "};\n";
-         // MATHJAX_CODEFILE
-         if (!g_mathjax_code.isEmpty())
-         {
-           mathJaxJs += g_mathjax_code;
-           mathJaxJs += "\n";
-         }
-         mathJaxJs += "</script>\n";
-         mathJaxJs += "<script type=\"text/javascript\" id=\"MathJax-script\" async=\"async\" src=\"" +
-                      path + "es5/tex-" + mathJaxFormat.lower() + ".js\">";
-         mathJaxJs+="</script>\n";
-        }
+        writeMathJaxScript("es5/",writeMathJax3Packages);
         break;
       case MATHJAX_VERSION_t::MathJax_2:
         {
+          QCString mathJaxFormat = Config_getEnumAsString(MATHJAX_FORMAT);
           mathJaxJs = "<script type=\"text/x-mathjax-config\">\n"
                       "MathJax.Hub.Config({\n"
                       "  extensions: [\"tex2jax.js\"";
           const StringVector &mathJaxExtensions = Config_getList(MATHJAX_EXTENSIONS);
           for (const auto &s : mathJaxExtensions)
           {
-            mathJaxJs+= ", \""+QCString(s.c_str())+".js\"";
+            mathJaxJs+= ", \""+QCString(s)+".js\"";
           }
           if (mathJaxFormat.isEmpty())
           {
@@ -584,20 +623,20 @@ static QCString substituteHtmlKeywords(const QCString &file,
   result = substituteKeywords(file,result,
   {
     // keyword           value getter
-    { "$datetime",       [&]() { return "<span class=\"datetime\"></span>"; } },
-    { "$date",           [&]() { return "<span class=\"date\"></span>";     } },
-    { "$time",           [&]() { return "<span class=\"time\"></span>";     } },
-    { "$year",           [&]() { return "<span class=\"year\"></span>";     } },
-    { "$navpath",        [&]() { return navPath;        } },
-    { "$stylesheet",     [&]() { return cssFile;        } },
-    { "$treeview",       [&]() { return treeViewCssJs;  } },
-    { "$searchbox",      [&]() { return searchBox;      } },
-    { "$search",         [&]() { return searchCssJs;    } },
-    { "$mathjax",        [&]() { return mathJaxJs;      } },
-    { "$darkmode",       [&]() { return darkModeJs;     } },
-    { "$generatedby",    [&]() { return generatedBy;    } },
-    { "$extrastylesheet",[&]() { return extraCssText;   } },
-    { "$relpath$",       [&]() { return relPath;        } } //<-- obsolete: for backwards compatibility only
+    { "$datetime",       [&]() -> QCString { return "<span class=\"datetime\"></span>"; } },
+    { "$date",           [&]() -> QCString { return "<span class=\"date\"></span>";     } },
+    { "$time",           [&]() -> QCString { return "<span class=\"time\"></span>";     } },
+    { "$year",           [&]() -> QCString { return "<span class=\"year\"></span>";     } },
+    { "$navpath",        [&]() -> QCString { return navPath;        } },
+    { "$stylesheet",     [&]() -> QCString { return cssFile;        } },
+    { "$treeview",       [&]() -> QCString { return treeViewCssJs;  } },
+    { "$searchbox",      [&]() -> QCString { return searchBox;      } },
+    { "$search",         [&]() -> QCString { return searchCssJs;    } },
+    { "$mathjax",        [&]() -> QCString { return mathJaxJs;      } },
+    { "$darkmode",       [&]() -> QCString { return darkModeJs;     } },
+    { "$generatedby",    [&]() -> QCString { return generatedBy;    } },
+    { "$extrastylesheet",[&]() -> QCString { return extraCssText;   } },
+    { "$relpath$",       [&]() -> QCString { return relPath;        } } //<-- obsolete: for backwards compatibility only
   });
 
   result = substitute(result,"$relpath^",relPath); //<-- must be done after the previous substitutions
@@ -775,6 +814,10 @@ void HtmlCodeGenerator::codify(const QCString &str)
                      { *m_t << "&lt;"; p++; }
                      else if (*p=='>')
                      { *m_t << "&gt;"; p++; }
+                     else if (*p=='[')
+                     { *m_t << "\\&zwj;["; m_col++;p++; }
+                     else if (*p==']')
+                     { *m_t << "\\&zwj;]"; m_col++;p++; }
                      else if (*p=='(')
                      { *m_t << "\\&zwj;("; m_col++;p++; }
                      else if (*p==')')
@@ -1499,7 +1542,7 @@ void HtmlGenerator::writeFooterFile(TextStream &t)
 
 static std::mutex g_indexLock;
 
-void HtmlGenerator::startFile(const QCString &name,const QCString &,
+void HtmlGenerator::startFile(const QCString &name,bool isSource,const QCString &,
                               const QCString &title,int /*id*/, int /*hierarchyLevel*/)
 {
   //printf("HtmlGenerator::startFile(%s)\n",qPrint(name));
@@ -1517,7 +1560,7 @@ void HtmlGenerator::startFile(const QCString &name,const QCString &,
   }
 
   m_lastFile = fileName;
-  m_t << substituteHtmlKeywords(g_header_file,g_header,convertToHtml(filterTitle(title)),m_relPath);
+  m_t << substituteHtmlKeywords(g_header_file,g_header,convertToHtml(filterTitle(title)),m_relPath,QCString(),isSource);
 
   m_t << "<!-- " << theTranslator->trGeneratedBy() << " Doxygen "
       << getDoxygenVersion() << " -->\n";
@@ -1655,11 +1698,11 @@ void HtmlGenerator::writeStyleInfo(int part)
           // convert style sheet to string
           QCString fileStr = fileToString(cssName);
           // write the string into the output dir
-          startPlainFile(cssfi.fileName().c_str());
+          startPlainFile(cssfi.fileName());
           m_t << fileStr;
           endPlainFile();
         }
-        Doxygen::indexList->addStyleSheetFile(cssfi.fileName().c_str());
+        Doxygen::indexList->addStyleSheetFile(cssfi.fileName());
       }
     }
     const StringVector &extraCssFiles = Config_getList(HTML_EXTRA_STYLESHEET);
@@ -1670,7 +1713,7 @@ void HtmlGenerator::writeStyleInfo(int part)
         FileInfo fi(fileName);
         if (fi.exists())
         {
-          Doxygen::indexList->addStyleSheetFile(fi.fileName().c_str());
+          Doxygen::indexList->addStyleSheetFile(fi.fileName());
         }
       }
     }
@@ -1930,6 +1973,10 @@ void HtmlGenerator::docify_(const QCString &str,bool inHtmlComment)
                      { m_t << "&lt;"; p++; }
                    else if (*p=='>')
                      { m_t << "&gt;"; p++; }
+		   else if (*p=='[')
+                     { m_t << "\\&zwj;["; p++; }
+                   else if (*p==']')
+                     { m_t << "\\&zwj;]"; p++; }
 		   else if (*p=='(')
                      { m_t << "\\&zwj;("; p++; }
                    else if (*p==')')
@@ -2673,10 +2720,10 @@ void HtmlGenerator::endExamples()
   m_t << "</dl>\n";
 }
 
-void HtmlGenerator::writeDoc(const IDocNodeAST *ast,const Definition *ctx,const MemberDef *,int id)
+void HtmlGenerator::writeDoc(const IDocNodeAST *ast,const Definition *ctx,const MemberDef *,int id,int sectionLevel)
 {
   const DocNodeAST *astImpl = dynamic_cast<const DocNodeAST*>(ast);
-  if (astImpl)
+  if (astImpl && sectionLevel<=m_tocState.maxLevel)
   {
     m_codeList->setId(id);
     HtmlDocVisitor visitor(m_t,*m_codeList,ctx,fileName());
@@ -3291,7 +3338,7 @@ void HtmlGenerator::writeExternalSearchPage()
     const StringVector &extraSearchMappings = Config_getList(EXTRA_SEARCH_MAPPINGS);
     for (const auto &ml : extraSearchMappings)
     {
-      QCString mapLine = ml.c_str();
+      QCString mapLine(ml);
       int eqPos = mapLine.find('=');
       if (eqPos!=-1) // tag command contains a destination
       {

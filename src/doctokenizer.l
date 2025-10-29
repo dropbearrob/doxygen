@@ -80,6 +80,7 @@ struct doctokenizerYY_state
   int sharpCount=0;
   bool markdownSupport=true;
   bool insideHtmlLink=false;
+  bool expectQuote=false;
 
   // context for section finding phase
   const Definition  *definition = nullptr;
@@ -407,7 +408,7 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
 <St_Para>{BLANK}*(\n|"\\ilinebr"){LISTITEM}     { /* list item on next line */
                          if (yyextra->insideHtmlLink || yyextra->insidePre) REJECT;
                          lineCount(yytext,yyleng);
-                         QCString text=extractPartAfterNewLine(QCString(yytext));
+                         QCString text=extractPartAfterNewLine(yytext);
                          uint32_t dashPos = static_cast<uint32_t>(text.findRev('-'));
                          assert(dashPos!=static_cast<uint32_t>(-1));
                          yyextra->token.isEnumList = text.at(dashPos+1)=='#';
@@ -436,7 +437,7 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
                          else
                          {
                            lineCount(yytext,yyleng);
-                           std::string text=extractPartAfterNewLine(QCString(yytext)).str();
+                           std::string text=extractPartAfterNewLine(yytext).str();
                            static const reg::Ex re(R"([*+][^*+]*$)"); // find last + or *
                            reg::Match match;
                            reg::search(text,match,re);
@@ -457,7 +458,7 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
                          else
                          {
                            lineCount(yytext,yyleng);
-                           std::string text=extractPartAfterNewLine(QCString(yytext)).str();
+                           std::string text=extractPartAfterNewLine(yytext).str();
                            static const reg::Ex re(R"(\d+)");
                            reg::Match match;
                            reg::search(text,match,re);
@@ -486,7 +487,7 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
 <St_Para>{BLANK}*(\n|"\\ilinebr"){ENDLIST}      { /* end list on next line */
                          if (yyextra->insideHtmlLink || yyextra->insidePre) REJECT;
                          lineCount(yytext,yyleng);
-                         QCString text=extractPartAfterNewLine(QCString(yytext));
+                         QCString text=extractPartAfterNewLine(yytext);
                          size_t dotPos = static_cast<size_t>(text.findRev('.'));
                          yyextra->token.indent = computeIndent(text.data(),dotPos);
                          return Token::make_TK_ENDLIST();
@@ -1118,6 +1119,7 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
                          return Token::make_TK_NONE();
                        }
 <St_Ref>{WS}+"\""{WS}* { // white space following by quoted string
+                         yyextra->expectQuote=true;
                          lineCount(yytext,yyleng);
                          BEGIN(St_Ref2);
                        }
@@ -1172,9 +1174,16 @@ SHOWDATE ([0-9]{4}"-"[0-9]{1,2}"-"[0-9]{1,2})?({WS}*[0-9]{1,2}":"[0-9]{1,2}(":"[
                          yyextra->token.name = yytext;
                          return Token::make_TK_SYMBOL();
                        }
-<St_Ref2>"\""|\n|"\\ilinebr" { /* " or \n => end of title */
+<St_Ref2>"\""|\n|"\\ilinebr" { /* " or \n => end of title? */
                          lineCount(yytext,yyleng);
-                         return Token::make_TK_NONE();
+                         if (!yyextra->expectQuote || yytext[0]=='"')
+                         {
+                           return Token::make_TK_NONE();
+                         }
+                         else
+                         {
+                           yyextra->token.name += yytext;
+                         }
                        }
 <St_Ref2>{HTMLTAG_STRICT}     { /* html tag */
                          lineCount(yytext,yyleng);
@@ -2047,6 +2056,7 @@ void DocTokenizer::setStateRef()
 {
   yyscan_t yyscanner = p->yyscanner;
   struct yyguts_t *yyg = (struct yyguts_t*)yyscanner;
+  yyextra->expectQuote=false;
   BEGIN(St_Ref);
 }
 

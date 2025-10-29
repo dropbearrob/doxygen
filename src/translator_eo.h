@@ -1930,7 +1930,7 @@ class TranslatorEsperanto : public TranslatorAdapter_1_8_4
       return "Dokumentaro de la Metodo";
     }
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override

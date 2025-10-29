@@ -2257,7 +2257,7 @@ class TranslatorHindi : public TranslatorAdapter_1_9_4
     QCString trConceptDefinition() override
     { return "संकल्पना परिभाषा"; }
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override

@@ -189,6 +189,7 @@ const char * table_schema[][2] = {
       "\tvolatile             INTEGER DEFAULT 0, -- 0:no 1:yes\n"
       "\tvirt                 INTEGER DEFAULT 0, -- 0:no 1:virtual 2:pure-virtual\n"
       "\tmutable              INTEGER DEFAULT 0, -- 0:no 1:yes\n"
+      "\tthread_local         INTEGER DEFAULT 0, -- 0:no 1:yes\n"
       "\tinitonly             INTEGER DEFAULT 0, -- 0:no 1:yes\n"
       "\tattribute            INTEGER DEFAULT 0, -- 0:no 1:yes\n"
       "\tproperty             INTEGER DEFAULT 0, -- 0:no 1:yes\n"
@@ -623,6 +624,7 @@ SqlStmt memberdef_insert={
     "volatile,"
     "virt,"
     "mutable,"
+    "thread_local,"
     "initonly,"
     "attribute,"
     "property,"
@@ -682,6 +684,7 @@ SqlStmt memberdef_insert={
     ":volatile,"
     ":virt,"
     ":mutable,"
+    ":thread_local,"
     ":initonly,"
     ":attribute,"
     ":property,"
@@ -1049,7 +1052,7 @@ static void insertMemberFunctionParams(int memberdef_id, const MemberDef *md, co
         {
           QCString qsrc_refid = md->getOutputFileBase() + "_1" + md->anchor();
           struct Refid src_refid = insertRefid(qsrc_refid);
-          struct Refid dst_refid = insertRefid(s.c_str());
+          struct Refid dst_refid = insertRefid(s);
           insertMemberReference(src_refid,dst_refid, "argument");
         }
         bindTextParameter(param_select,":type",a.type);
@@ -1419,18 +1422,13 @@ QCString getSQLDocBlock(const Definition *scope,
 
   TextStream t;
   auto parser { createDocParser() };
-  auto ast    { validatingParseDoc(
-                *parser.get(),
-                fileName,
-                lineNr,
-                scope,
-                toMemberDef(def),
-                doc,
-                FALSE,
-                FALSE,
-                QCString(),
-                FALSE,
-                FALSE)
+  auto ast    { validatingParseDoc(*parser.get(),
+                                   fileName,
+                                   lineNr,
+                                   scope,
+                                   toMemberDef(def),
+                                   doc,
+                                   DocOptions())
               };
   auto astImpl = dynamic_cast<const DocNodeAST*>(ast.get());
   if (astImpl)
@@ -1442,7 +1440,7 @@ QCString getSQLDocBlock(const Definition *scope,
         scope ? scope->getDefFileExtension() : QCString(""));
     std::visit(visitor,astImpl->root);
   }
-  return convertCharEntitiesToUTF8(t.str().c_str());
+  return convertCharEntitiesToUTF8(t.str());
 }
 
 static void getSQLDesc(SqlStmt &s,const char *col,const QCString &value,const Definition *def)
@@ -1693,6 +1691,7 @@ static void generateSqlite3ForMember(const MemberDef *md, struct Refid scope_ref
   if (md->memberType() == MemberType::Variable)
   {
     bindIntParameter(memberdef_insert,":mutable",md->isMutable());
+    bindIntParameter(memberdef_insert,":thread_local",md->isThreadLocal());
     bindIntParameter(memberdef_insert,":initonly",md->isInitonly());
     bindIntParameter(memberdef_insert,":attribute",md->isAttribute());
     bindIntParameter(memberdef_insert,":property",md->isProperty());
@@ -1800,12 +1799,12 @@ static void generateSqlite3ForMember(const MemberDef *md, struct Refid scope_ref
       {
         DBG_CTX(("initializer:%s %s %s %d\n",
               qPrint(md->anchor()),
-              s.c_str(),
+              qPrint(s),
               qPrint(md->getBodyDef()->getDefFileName()),
               md->getStartBodyLine()));
         QCString qsrc_refid = md->getOutputFileBase() + "_1" + md->anchor();
         struct Refid src_refid = insertRefid(qsrc_refid);
-        struct Refid dst_refid = insertRefid(s.c_str());
+        struct Refid dst_refid = insertRefid(s);
         insertMemberReference(src_refid,dst_refid, "initializer");
       }
     }

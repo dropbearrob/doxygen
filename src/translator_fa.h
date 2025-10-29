@@ -1798,7 +1798,7 @@ class TranslatorPersian : public TranslatorAdapter_1_7_5
     }
 
 //////////////////////////////////////////////////////////////////////////
-// new since 1.15.0
+// new since 1.16.0
 //////////////////////////////////////////////////////////////////////////
     /*! Used for the requirements traceability feature */
     QCString trRequirements() override
