@@ -2575,6 +2575,80 @@ class TranslatorRussian : public Translator
   // new since 1.11.0
   //////////////////////////////////////////////////////////////////////////
   QCString trImportant() override { return "Важно!"; }
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "Требования";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "Прослеживаемость";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "Прослеживаемость: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "ID требования";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "Удовлетворено";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "Проверено";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "Удовлетворяет";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "Проверяет";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "Вот список всех требований с краткими описаниями:";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "Вот информация о прослеживаемости для всех требований:";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "Удовлетворено";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "Проверено";
+    }
 };
 
 #endif

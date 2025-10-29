@@ -2007,6 +2007,80 @@ class TranslatorHungarian : public TranslatorAdapter_1_8_15
       result+="lett létrehozva:";
       return result;
     }
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "Követelmények";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "Nyomonkövethetőség";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "Nyomonkövethetőség: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "Követelmény azonosító";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "Teljesítette";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "Ellenőrizte";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "Teljesíti";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "Ellenőrzi";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "Itt van az összes követelmény listája rövid leírásokkal:";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "Itt van az összes követelmény nyomonkövethetőségi információja:";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "Teljesítve";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "Ellenőrizve";
+    }
 };
 
 #endif

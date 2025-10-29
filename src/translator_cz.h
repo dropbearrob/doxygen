@@ -2489,6 +2489,81 @@ class TranslatorCzech : public TranslatorAdapter_1_9_6
       }
       return result;
     }
+
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "Požadavky";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "Sledovatelnost";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "Sledovatelnost: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "ID požadavku";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "Splněno";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "Ověřeno";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "Splňuje";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "Ověřuje";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "Zde je seznam všech požadavků s krátkými popisy:";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "Zde jsou informace o sledovatelnosti pro všechny požadavky:";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "Splněno";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "Ověřeno";
+    }
 };
 
 #endif // TRANSLATOR_CZ_H

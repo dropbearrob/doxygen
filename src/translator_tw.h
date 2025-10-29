@@ -1983,6 +1983,80 @@ class TranslatorChinesetraditional : public TranslatorAdapter_1_8_15
       return result;
     }
 
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "需求";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "可追溯性";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "可追溯性: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "需求ID";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "滿足者";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "驗證者";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "滿足";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "驗證";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "這是所有需求的清單及簡要說明：";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "這是所有需求的可追溯性資訊：";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "已滿足";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "已驗證";
+    }
 };
 
 #endif

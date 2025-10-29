@@ -2444,5 +2444,79 @@ class TranslatorSwedish : public TranslatorAdapter_1_9_6
       }
       return result;
     }
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "Krav";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "Spårbarhet";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "Spårbarhet: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "Krav-ID";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "Uppfyllt av";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "Verifierat av";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "Uppfyller";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "Verifierar";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "Här är en lista över alla krav med korta beskrivningar:";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "Här är spårbarhetsinformation för alla krav:";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "Uppfyllt";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "Verifierat";
+    }
 };
 #endif

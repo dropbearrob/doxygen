@@ -1528,6 +1528,80 @@ class TranslatorArabic : public TranslatorAdapter_1_4_6
       static const char *dayPeriod[] = { "ص", "م" };
       return dayPeriod[period?1:0];
     }
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "المتطلبات";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "إمكانية التتبع";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "إمكانية التتبع: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "معرف المتطلب";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "راضٍ عن";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "تم التحقق من قبل";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "يرضي";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "يتحقق";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "فيما يلي قائمة بجميع المتطلبات مع أوصاف موجزة:";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "فيما يلي معلومات إمكانية التتبع لجميع المتطلبات:";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "راضٍ";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "تم التحقق";
+    }
 };
 
 #endif

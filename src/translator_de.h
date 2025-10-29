@@ -2592,16 +2592,16 @@ class TranslatorGerman : public Translator
     QCString trNamespaceMembersDescriptionTotal(NamespaceMemberHighlight::Enum hl) override
     {
       bool extractAll = Config_getBool(EXTRACT_ALL);
-      
+
       QCString result           = "Hier folgt eine Liste mit Verweisen auf die Namensraum-Dokumentation für ";
       QCString result_singular1 = result + "jede dokumentierte";
       QCString result_singular2 = result + "jedes dokumentiertes";
       QCString result_singular3 = result + "jeder dokumentierten";
       QCString result_plural    = result + "alle dokumentierten";
-      
+
       QCString singularResult = "";
       QCString pluralResult   = "";
-      
+
       switch (hl)
       {
         case NamespaceMemberHighlight::All:
@@ -2644,7 +2644,7 @@ class TranslatorGerman : public Translator
       if (!extractAll)
         result += singularResult + " mit Verweise auf die Namensraum-Dokumentation:"; else
         result += singularResult + " mit Verweise auf dem sich beziehenden Namensraum:";
-          
+
       return result;
     }
     QCString trDefinition() override  { return "Definition";}
@@ -2668,10 +2668,10 @@ class TranslatorGerman : public Translator
     {
       bool extractAll = Config_getBool(EXTRACT_ALL);
       QCString result = "Zusammengefaßt ";
-      
+
       QCString singularResult = result + "bezieht sich das Modul auf: ";
       QCString pluralResult   = result + "beziehen sich die Module auf: ";
-      
+
       switch (hl)
       {
         case ModuleMemberHighlight::All:
@@ -2710,7 +2710,7 @@ class TranslatorGerman : public Translator
       if (!extractAll)
         result = singularResult; else
         result = pluralResult;
-      
+
       return result;
     }
     QCString trExportedModules() override
@@ -2732,6 +2732,80 @@ class TranslatorGerman : public Translator
     QCString trImportant() override
     {
       return "Wichtig";
+    }
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "Anforderungen";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "Rückverfolgbarkeit";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "Rückverfolgbarkeit: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "Anforderungs-ID";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "Erfüllt durch";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "Verifiziert durch";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "Erfüllt";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "Verifiziert";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "Hier ist eine Liste aller Anforderungen mit Kurzbeschreibungen:";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "Hier sind Rückverfolgbarkeitsinformationen für alle Anforderungen:";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "Erfüllt";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "Verifiziert";
     }
 };
 #endif

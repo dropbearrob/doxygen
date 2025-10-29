@@ -2677,18 +2677,6 @@ class TranslatorEnglish : public Translator
       return "Here is traceability information for all requirements:";
     }
 
-    /*! Used in traceability page statistics - singular */
-    QCString trRequirement() override
-    {
-      return "requirement";
-    }
-
-    /*! Used in traceability page statistics - plural */
-    QCString trRequirementsLC() override
-    {
-      return "requirements";
-    }
-
     /*! Used in traceability statistics */
     QCString trSatisfied() override
     {

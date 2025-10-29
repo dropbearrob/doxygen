@@ -2256,6 +2256,80 @@ class TranslatorHindi : public TranslatorAdapter_1_9_4
     /*! used to introduce the definition of the C++20 concept */
     QCString trConceptDefinition() override
     { return "संकल्पना परिभाषा"; }
+//////////////////////////////////////////////////////////////////////////
+// new since 1.15.0
+//////////////////////////////////////////////////////////////////////////
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    {
+      return "आवश्यकताएँ";
+    }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    {
+      return "ट्रेसेबिलिटी";
+    }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    {
+      return "ट्रेसेबिलिटी: " + name;
+    }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    {
+      return "आवश्यकता ID";
+    }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    {
+      return "द्वारा संतुष्ट";
+    }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    {
+      return "द्वारा सत्यापित";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    {
+      return "संतुष्ट करता है";
+    }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    {
+      return "सत्यापित करता है";
+    }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    {
+      return "यहाँ संक्षिप्त विवरण के साथ सभी आवश्यकताओं की सूची है:";
+    }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    {
+      return "यहाँ सभी आवश्यकताओं के लिए ट्रेसेबिलिटी जानकारी है:";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    {
+      return "संतुष्ट";
+    }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    {
+      return "सत्यापित";
+    }
 };
 
 #endif
