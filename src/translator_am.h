@@ -1808,5 +1808,58 @@ class TranslatorArmenian : public TranslatorAdapter_1_8_0
     QCString trDirDepGraph(const QCString &name) override
     { return name + QCString("-ի ֆայլադարանների կախվածությունների գծագիր:"); }
 
+
+//////////////////////////////////////////////////////////////////////////
+// new since 1.16.0
+//////////////////////////////////////////////////////////////////////////
+
+    /*! Used for the requirements traceability feature */
+    QCString trRequirements() override
+    { return "Պահանջներ"; }
+
+    /*! Used for the traceability index page title */
+    QCString trTraceability() override
+    { return "Հետագծելիություն"; }
+
+    /*! Used for traceability page title prefix */
+    QCString trTraceabilityFor(const QCString &name) override
+    { return "Հետևելիություն՝ " + name; }
+
+    /*! Used in traceability table header */
+    QCString trRequirementID() override
+    { return "Պահանջի ID"; }
+
+    /*! Used in traceability table header */
+    QCString trSatisfiedBy() override
+    { return "Բավարարված է"; }
+
+    /*! Used in traceability table header */
+    QCString trVerifiedBy() override
+    { return "Հաստատված է"; }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trSatisfies() override
+    { return "Բավարարում է"; }
+
+    /*! Used in @satisfies/@verifies documentation */
+    QCString trVerifies() override
+    { return "Հաստատում է"; }
+
+    /*! Used in requirements index */
+    QCString trRequirementsDescription() override
+    { return "Ահա բոլոր պահանջների ցանկը՝ համառոտ նկարագրություններով."; }
+
+    /*! Used in traceability index */
+    QCString trTraceabilityDescription() override
+    { return "Ահա բոլոր պահանջների հետագծելիության մասին տեղեկատվությունը.";}
+
+    /*! Used in traceability statistics */
+    QCString trSatisfied() override
+    { return "Գոհ"; }
+
+    /*! Used in traceability statistics */
+    QCString trVerified() override
+    { return "Հաստատված է"; }
+
 };
 #endif
