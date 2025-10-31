@@ -26,7 +26,7 @@
 #ifndef TRANSLATOR_RU_H
 #define TRANSLATOR_RU_H
 
-class TranslatorRussian : public Translator
+class TranslatorRussian : public TranslatorAdapter_1_16_0
 {
   public:
     /*! Used for identification of the language. */
@@ -102,7 +102,7 @@ class TranslatorRussian : public Translator
     /* Isn't used when optimization for C is on. */
     QCString trMemberList() override
     {
-      return "Список членов класса";
+      return "Cписок членов класса";
     }
 
     /*! this is the first part of a sentence that is followed by a class name */
@@ -1937,7 +1937,7 @@ class TranslatorRussian : public Translator
     {
       // single is true implies a single file
       QCString result="Документация для этого сервиса "
-                      "сгенерирована из следующего файл";
+                                "сгенерирована из следующего файл";
       if (single) result+="а:"; else result+="ов:";
       return result;
     }
@@ -1946,7 +1946,7 @@ class TranslatorRussian : public Translator
     {
       // single is true implies a single file
       QCString result="Документация по этому одиночке "
-                      "сгенерирована из следующего файл";
+                                "сгенерирована из следующего файл";
       if (single) result+="а:"; else result+="ов:";
       return result;
     }
@@ -2008,7 +2008,7 @@ class TranslatorRussian : public Translator
         return "Компоненты";
     case VhdlSpecifier::CONSTANT:
       if (single)
-        return "Константа";
+        return "Конатанта";
       else
         return "Константы";
     case VhdlSpecifier::ENTITY:
@@ -2575,80 +2575,6 @@ class TranslatorRussian : public Translator
   // new since 1.11.0
   //////////////////////////////////////////////////////////////////////////
   QCString trImportant() override { return "Важно!"; }
-//////////////////////////////////////////////////////////////////////////
-// new since 1.16.0
-//////////////////////////////////////////////////////////////////////////
-    /*! Used for the requirements traceability feature */
-    QCString trRequirements() override
-    {
-      return "Требования";
-    }
-
-    /*! Used for the traceability index page title */
-    QCString trTraceability() override
-    {
-      return "Прослеживаемость";
-    }
-
-    /*! Used for traceability page title prefix */
-    QCString trTraceabilityFor(const QCString &name) override
-    {
-      return "Прослеживаемость: " + name;
-    }
-
-    /*! Used in traceability table header */
-    QCString trRequirementID() override
-    {
-      return "ID требования";
-    }
-
-    /*! Used in traceability table header */
-    QCString trSatisfiedBy() override
-    {
-      return "Удовлетворено";
-    }
-
-    /*! Used in traceability table header */
-    QCString trVerifiedBy() override
-    {
-      return "Проверено";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trSatisfies() override
-    {
-      return "Удовлетворяет";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trVerifies() override
-    {
-      return "Проверяет";
-    }
-
-    /*! Used in requirements index */
-    QCString trRequirementsDescription() override
-    {
-      return "Вот список всех требований с краткими описаниями:";
-    }
-
-    /*! Used in traceability index */
-    QCString trTraceabilityDescription() override
-    {
-      return "Вот информация о прослеживаемости для всех требований:";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trSatisfied() override
-    {
-      return "Удовлетворено";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trVerified() override
-    {
-      return "Проверено";
-    }
 };
 
 #endif

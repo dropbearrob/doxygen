@@ -16,6 +16,8 @@
  */
 
 /*
+ * 31 Oct 2025 : Updated to "new since 1.16.0" by
+ *               Rob Mellor <rob@dropbearsoftware.com>
  * 15 Dec 2001 : Translation to greek by
  *               Harry Kalogirou <no email>
  *
@@ -50,7 +52,7 @@
 #ifndef TRANSLATOR_GR_H
 #define TRANSLATOR_GR_H
 
-class TranslatorGreek : public Translator
+class TranslatorGreek : public TranslatorAdapter_1_16_0
 {
   public:
 
@@ -2664,80 +2666,6 @@ class TranslatorGreek : public Translator
     QCString trImportant() override
     {
       return "Σημαντικό";
-    }
-//////////////////////////////////////////////////////////////////////////
-// new since 1.16.0
-//////////////////////////////////////////////////////////////////////////
-    /*! Used for the requirements traceability feature */
-    QCString trRequirements() override
-    {
-      return "Απαιτήσεις";
-    }
-
-    /*! Used for the traceability index page title */
-    QCString trTraceability() override
-    {
-      return "Ιχνηλασιμότητα";
-    }
-
-    /*! Used for traceability page title prefix */
-    QCString trTraceabilityFor(const QCString &name) override
-    {
-      return "Ιχνηλασιμότητα: " + name;
-    }
-
-    /*! Used in traceability table header */
-    QCString trRequirementID() override
-    {
-      return "Αναγνωριστικό Απαίτησης";
-    }
-
-    /*! Used in traceability table header */
-    QCString trSatisfiedBy() override
-    {
-      return "Ικανοποιείται από";
-    }
-
-    /*! Used in traceability table header */
-    QCString trVerifiedBy() override
-    {
-      return "Επαληθεύεται από";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trSatisfies() override
-    {
-      return "Ικανοποιεί";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trVerifies() override
-    {
-      return "Επαληθεύει";
-    }
-
-    /*! Used in requirements index */
-    QCString trRequirementsDescription() override
-    {
-      return "Ακολουθεί λίστα όλων των απαιτήσεων με σύντομες περιγραφές:";
-    }
-
-    /*! Used in traceability index */
-    QCString trTraceabilityDescription() override
-    {
-      return "Ακολουθούν πληροφορίες ιχνηλασιμότητας για όλες τις απαιτήσεις:";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trSatisfied() override
-    {
-      return "Ικανοποιημένο";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trVerified() override
-    {
-      return "Επαληθευμένο";
     }
 };
 

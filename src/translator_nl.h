@@ -18,7 +18,7 @@
 #ifndef TRANSLATOR_NL_H
 #define TRANSLATOR_NL_H
 
-class TranslatorDutch : public Translator
+class TranslatorDutch : public TranslatorAdapter_1_16_0
 {
   public:
     QCString idLanguage() override
@@ -2293,80 +2293,6 @@ class TranslatorDutch : public Translator
     QCString trImportant() override
     {
       return "Belangrijk";
-    }
-//////////////////////////////////////////////////////////////////////////
-// new since 1.16.0
-//////////////////////////////////////////////////////////////////////////
-    /*! Used for the requirements traceability feature */
-    QCString trRequirements() override
-    {
-      return "Vereisten";
-    }
-
-    /*! Used for the traceability index page title */
-    QCString trTraceability() override
-    {
-      return "Traceerbaarheid";
-    }
-
-    /*! Used for traceability page title prefix */
-    QCString trTraceabilityFor(const QCString &name) override
-    {
-      return "Traceerbaarheid: " + name;
-    }
-
-    /*! Used in traceability table header */
-    QCString trRequirementID() override
-    {
-      return "Vereiste ID";
-    }
-
-    /*! Used in traceability table header */
-    QCString trSatisfiedBy() override
-    {
-      return "Voldaan door";
-    }
-
-    /*! Used in traceability table header */
-    QCString trVerifiedBy() override
-    {
-      return "Geverifieerd door";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trSatisfies() override
-    {
-      return "Voldoet";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trVerifies() override
-    {
-      return "Verifieert";
-    }
-
-    /*! Used in requirements index */
-    QCString trRequirementsDescription() override
-    {
-      return "Hier is een lijst van alle vereisten met korte beschrijvingen:";
-    }
-
-    /*! Used in traceability index */
-    QCString trTraceabilityDescription() override
-    {
-      return "Hier is de traceerbaarheid informatie voor alle vereisten:";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trSatisfied() override
-    {
-      return "Voldaan";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trVerified() override
-    {
-      return "Geverifieerd";
     }
 };
 

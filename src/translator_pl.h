@@ -24,7 +24,7 @@
 #ifndef TRANSLATOR_PL_H
 #define TRANSLATOR_PL_H
 
-class TranslatorPolish : public Translator
+class TranslatorPolish : public TranslatorAdapter_1_16_0
 {
   public:
 
@@ -2580,80 +2580,6 @@ class TranslatorPolish : public Translator
     QCString trImportant() override
     {
       return "Ważne";
-    }
-//////////////////////////////////////////////////////////////////////////
-// new since 1.16.0
-//////////////////////////////////////////////////////////////////////////
-    /*! Used for the requirements traceability feature */
-    QCString trRequirements() override
-    {
-      return "Wymagania";
-    }
-
-    /*! Used for the traceability index page title */
-    QCString trTraceability() override
-    {
-      return "Identyfikowalność";
-    }
-
-    /*! Used for traceability page title prefix */
-    QCString trTraceabilityFor(const QCString &name) override
-    {
-      return "Identyfikowalność: " + name;
-    }
-
-    /*! Used in traceability table header */
-    QCString trRequirementID() override
-    {
-      return "ID wymagania";
-    }
-
-    /*! Used in traceability table header */
-    QCString trSatisfiedBy() override
-    {
-      return "Spełnione przez";
-    }
-
-    /*! Used in traceability table header */
-    QCString trVerifiedBy() override
-    {
-      return "Zweryfikowane przez";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trSatisfies() override
-    {
-      return "Spełnia";
-    }
-
-    /*! Used in @satisfies/@verifies documentation */
-    QCString trVerifies() override
-    {
-      return "Weryfikuje";
-    }
-
-    /*! Used in requirements index */
-    QCString trRequirementsDescription() override
-    {
-      return "Oto lista wszystkich wymagań z krótkimi opisami:";
-    }
-
-    /*! Used in traceability index */
-    QCString trTraceabilityDescription() override
-    {
-      return "Oto informacje o identyfikowalności dla wszystkich wymagań:";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trSatisfied() override
-    {
-      return "Spełnione";
-    }
-
-    /*! Used in traceability statistics */
-    QCString trVerified() override
-    {
-      return "Zweryfikowane";
     }
 };
 
